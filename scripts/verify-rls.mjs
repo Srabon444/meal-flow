@@ -26,10 +26,16 @@ async function signIn(email, password) {
   return client;
 }
 
+function isLocalUrl(rawUrl) {
+  const host = new URL(rawUrl).hostname;
+  return host === '127.0.0.1' || host === 'localhost';
+}
+
 // employee1@example.com is created via the edge function with no password set.
 // Try the known test password first; if that fails, use the service-role key
-// (local dev only) to set it, then retry — same technique used to test the
-// edge function's 403 case in Task 7's verification.
+// (local dev only, enforced by isLocalUrl below, not just this comment) to set
+// it, then retry — same technique used to test the edge function's 403 case in
+// Task 7's verification.
 async function ensureEmployeeSession() {
   try {
     return await signIn(EMPLOYEE_EMAIL, EMPLOYEE_PASSWORD);
@@ -38,6 +44,15 @@ async function ensureEmployeeSession() {
       throw new Error(
         `${EMPLOYEE_EMAIL} login failed and no SUPABASE_SERVICE_ROLE_KEY was provided to set a password. ` +
           `Original error: ${err.message}`
+      );
+    }
+    // Refuse to reset a real user's password anywhere but local dev — a stale
+    // SUPABASE_SERVICE_ROLE_KEY plus PUBLIC_SUPABASE_URL pointed at staging/prod
+    // must never result in this script overwriting a real credential.
+    if (!isLocalUrl(url)) {
+      throw new Error(
+        `refusing to reset ${EMPLOYEE_EMAIL}'s password: PUBLIC_SUPABASE_URL (${url}) is not localhost/127.0.0.1. ` +
+          `This self-heal path is local-dev only.`
       );
     }
     const admin = createClient(url, serviceRoleKey);
