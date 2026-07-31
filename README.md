@@ -1,42 +1,18 @@
-# sv
+# OfficeMeal
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Office meal ordering, tally, dues, and cancel-approval workflow. See `office-meal-app-prompt.md` for the full source spec and `docs/superpowers/specs/` for sub-project designs.
 
-## Creating a project
+## Local development
 
-If you're seeing this, you've probably already done this step. Congrats!
+1. `npm install`
+2. `npx supabase start` (requires Docker running)
+3. Copy `.env.example` to `.env`, fill in values from `npx supabase status`
+4. `npm run dev` for web, or `npm run tauri dev` for the desktop shell
 
-```sh
-# create a new project
-npx sv create my-app
-```
+## Sub-projects
 
-To recreate this project with the same configuration:
-
-```sh
-# recreate this project
-npx sv@0.17.0 create --template minimal --types ts --add vitest="usages:unit" tailwindcss="plugins:none" sveltekit-adapter="adapter:static" --install npm .
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```sh
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+1. Foundation (schema, auth, scaffold) — this repo's current state
+2. Employee flow — meal entry, history, cancel request, balance
+3. Admin flow — tally, rate management, payments, cancel approval, reports
+4. Charts
+5. CI/CD release pipeline
