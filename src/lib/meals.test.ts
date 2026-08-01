@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pickActiveRate, computeBalance } from './meals';
+import { pickActiveRate, computeBalance, localToday } from './meals';
 
 describe('pickActiveRate', () => {
   it('returns null when no rates exist', () => {
@@ -7,16 +7,36 @@ describe('pickActiveRate', () => {
   });
 
   it('returns null when all rates start after today', () => {
-    expect(pickActiveRate([{ rate: 100, effective_from: '2026-09-01' }], '2026-08-01')).toBeNull();
+    expect(
+      pickActiveRate([{ rate: 100, effective_from: '2026-09-01', created_at: 'a' }], '2026-08-01')
+    ).toBeNull();
   });
 
   it('picks the most recent rate that has already started', () => {
     const rates = [
-      { rate: 100, effective_from: '2026-01-01' },
-      { rate: 120, effective_from: '2026-07-01' },
-      { rate: 150, effective_from: '2026-09-01' }
+      { rate: 100, effective_from: '2026-01-01', created_at: 'a' },
+      { rate: 120, effective_from: '2026-07-01', created_at: 'b' },
+      { rate: 150, effective_from: '2026-09-01', created_at: 'c' }
     ];
     expect(pickActiveRate(rates, '2026-08-01')).toBe(120);
+  });
+
+  it('breaks effective_from ties on created_at, regardless of input order', () => {
+    const older = { rate: 100, effective_from: '2026-07-01', created_at: '2026-06-01T00:00:00Z' };
+    const newer = { rate: 120, effective_from: '2026-07-01', created_at: '2026-06-02T00:00:00Z' };
+    expect(pickActiveRate([older, newer], '2026-08-01')).toBe(120);
+    expect(pickActiveRate([newer, older], '2026-08-01')).toBe(120);
+  });
+
+  it('includes a rate whose effective_from is exactly today', () => {
+    const rates = [{ rate: 90, effective_from: '2026-08-01', created_at: 'a' }];
+    expect(pickActiveRate(rates, '2026-08-01')).toBe(90);
+  });
+});
+
+describe('localToday', () => {
+  it('returns a YYYY-MM-DD string', () => {
+    expect(localToday()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
   });
 });
 

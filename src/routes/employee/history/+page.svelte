@@ -20,10 +20,12 @@
   let requestingId = $state<string | null>(null);
   let reason = $state('');
   let error = $state('');
+  let loadError = $state('');
   let submitting = $state(false);
 
   async function load() {
     loading = true;
+    loadError = '';
     const [entriesRes, requestsRes] = await Promise.all([
       supabase
         .from('meal_entries')
@@ -36,6 +38,12 @@
         .eq('requested_by', userId)
         .order('created_at', { ascending: false })
     ]);
+    const failed = [entriesRes.error, requestsRes.error].find(Boolean);
+    if (failed) {
+      loadError = failed.message;
+      loading = false;
+      return;
+    }
     entries = entriesRes.data ?? [];
     requests = requestsRes.data ?? [];
     loading = false;
@@ -77,6 +85,8 @@
 
 {#if loading}
   <p class="text-sm text-ink/50">Loading…</p>
+{:else if loadError}
+  <p class="text-sm text-stamp-dark">{loadError}</p>
 {:else if entries.length === 0}
   <p class="text-sm text-ink/50">No entries yet.</p>
 {:else}
@@ -88,7 +98,7 @@
           <div>
             <p class="text-sm font-medium">{entry.entry_date}</p>
             <p class="text-xs text-ink/50">
-              {entry.status} · charged {entry.rate_applied}
+              {entry.status} · charged {entry.rate_applied.toFixed(2)}
               {#if existingRequest}· cancel {existingRequest.status.toLowerCase()}{/if}
             </p>
           </div>
@@ -127,9 +137,9 @@
             class="mt-2 w-full border-b-2 border-line bg-transparent py-2 text-sm outline-none focus:border-stamp transition-colors"
             rows="2"
           ></textarea>
+          {#if error}<p class="mt-2 text-sm text-stamp-dark">{error}</p>{/if}
         {/if}
       </li>
     {/each}
   </ul>
-  {#if error}<p class="mt-3 text-sm text-stamp-dark">{error}</p>{/if}
 {/if}

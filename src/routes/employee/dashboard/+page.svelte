@@ -1,10 +1,9 @@
 <script lang="ts">
   import { page } from '$app/state';
   import { supabase } from '$lib/supabase';
-  import { pickActiveRate, computeBalance } from '$lib/meals';
+  import { pickActiveRate, computeBalance, localToday } from '$lib/meals';
   import { onMount } from 'svelte';
 
-  const today = new Date().toISOString().slice(0, 10);
   const userId = page.data.profile?.id as string;
 
   type TodayEntry = { id: string; entry_date: string; status: string; rate_applied: number };
@@ -15,15 +14,27 @@
   let balance = $state({ totalEaten: 0, totalCost: 0, totalPaid: 0, due: 0 });
   let marking = $state(false);
   let error = $state('');
+  let loadError = $state('');
 
   async function load() {
     loading = true;
+    loadError = '';
     const [ratesRes, entriesRes, paymentsRes] = await Promise.all([
-      supabase.from('meal_rates').select('rate, effective_from'),
+      supabase.from('meal_rates').select('rate, effective_from, created_at'),
       supabase.from('meal_entries').select('id, entry_date, status, rate_applied').eq('user_id', userId),
       supabase.from('payments').select('amount').eq('user_id', userId)
     ]);
 
+    const failed = [ratesRes.error, entriesRes.error, paymentsRes.error].find(Boolean);
+    if (failed) {
+      loadError = failed.message;
+      loading = false;
+      return;
+    }
+
+    // Read the date fresh each load — a tab left open past midnight must not
+    // keep reporting yesterday as "today".
+    const today = localToday();
     activeRate = pickActiveRate(ratesRes.data ?? [], today);
     todayEntry = (entriesRes.data ?? []).find((e) => e.entry_date === today) ?? null;
     balance = computeBalance(entriesRes.data ?? [], paymentsRes.data ?? []);
@@ -33,12 +44,14 @@
   onMount(load);
 
   async function markEating() {
+    if (marking) return;
     if (activeRate === null) return;
     marking = true;
     error = '';
+    // rate_applied is recomputed server-side by a trigger; this value is only a hint.
     const { error: insertError } = await supabase
       .from('meal_entries')
-      .insert({ user_id: userId, entry_date: today, rate_applied: activeRate });
+      .insert({ user_id: userId, entry_date: localToday(), rate_applied: activeRate });
     marking = false;
     if (insertError) {
       error = insertError.message;
@@ -55,12 +68,18 @@
 
 {#if loading}
   <p class="text-sm text-ink/50">Loading…</p>
+{:else if loadError}
+  <p class="text-sm text-stamp-dark">{loadError}</p>
 {:else}
   <div class="grid gap-10 md:grid-cols-[320px_1fr] items-start">
     <div class="ticket pt-8 pb-6 px-6">
-      {#if todayEntry}
+      {#if todayEntry?.status === 'CONFIRMED'}
         <p class="font-display text-[11px] tracking-widest text-sage uppercase mb-2">Marked</p>
-        <p class="text-sm">You're eating today. Charged at {todayEntry.rate_applied}.</p>
+        <p class="text-sm">You're eating today. Charged at {todayEntry.rate_applied.toFixed(2)}.</p>
+      {:else if todayEntry}
+        <!-- unique(user_id, entry_date) means a cancelled day can't be re-marked. -->
+        <p class="font-display text-[11px] tracking-widest text-ink/50 uppercase mb-2">Cancelled</p>
+        <p class="text-sm text-ink/60">Today's entry was cancelled.</p>
       {:else if activeRate === null}
         <p class="font-display text-[11px] tracking-widest text-stamp uppercase mb-2">No rate set</p>
         <p class="text-sm text-ink/60">Ask your admin to set a meal rate first.</p>
@@ -72,7 +91,7 @@
           disabled={marking}
           class="font-display text-sm tracking-wide bg-stamp text-paper px-5 py-2.5 rounded-sm hover:bg-stamp-dark transition-colors disabled:opacity-50 w-full"
         >
-          {marking ? 'Marking…' : `Yes, count me in (${activeRate}) →`}
+          {marking ? 'Marking…' : `Yes, count me in (${activeRate.toFixed(2)}) →`}
         </button>
       {/if}
     </div>
@@ -86,15 +105,15 @@
         </div>
         <div>
           <dt class="text-ink/50">Total cost</dt>
-          <dd class="font-display text-lg">{balance.totalCost}</dd>
+          <dd class="font-display text-lg">{balance.totalCost.toFixed(2)}</dd>
         </div>
         <div>
           <dt class="text-ink/50">Total paid</dt>
-          <dd class="font-display text-lg">{balance.totalPaid}</dd>
+          <dd class="font-display text-lg">{balance.totalPaid.toFixed(2)}</dd>
         </div>
         <div>
           <dt class="text-ink/50">Due</dt>
-          <dd class="font-display text-lg {balance.due > 0 ? 'text-stamp' : 'text-sage'}">{balance.due}</dd>
+          <dd class="font-display text-lg {balance.due > 0 ? 'text-stamp' : 'text-sage'}">{balance.due.toFixed(2)}</dd>
         </div>
       </dl>
     </div>
