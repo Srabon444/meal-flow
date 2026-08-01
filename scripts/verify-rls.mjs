@@ -73,6 +73,12 @@ async function ensureEmployeeSession() {
 }
 
 async function main() {
+  // This whole script writes fixture rows and resets a test password — local-dev
+  // only, not just the ensureEmployeeSession() self-heal path.
+  if (!isLocalUrl(url)) {
+    throw new Error(`refusing to run against non-local PUBLIC_SUPABASE_URL (${url})`);
+  }
+
   const failures = [];
 
   const admin = await signIn('admin@example.com', 'admin1234');

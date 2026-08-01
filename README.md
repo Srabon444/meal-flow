@@ -9,6 +9,15 @@ Office meal ordering, tally, dues, and cancel-approval workflow. See `office-mea
 3. Copy `.env.example` to `.env`, fill in values from `npx supabase status`
 4. `npm run dev` for web, or `npm run tauri dev` for the desktop shell
 
+`supabase db reset` seeds one admin account (`admin@example.com` / `admin1234`) via
+`supabase/seed.sql` — that's the only account with no set-up step; every employee
+account is created through the admin UI (`/admin/employees`), which hands back a
+temporary password to share with them. There is no public signup.
+
+In production, seed.sql doesn't run — bootstrap the first admin manually: create the
+user in the Supabase dashboard, then `insert into profiles (id, name, role) values
+('<their auth user id>', '<name>', 'admin');`.
+
 ## Sub-projects
 
 1. Foundation (schema, auth, scaffold) — this repo's current state

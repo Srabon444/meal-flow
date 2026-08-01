@@ -1,6 +1,7 @@
 create or replace function is_admin()
 returns boolean
 language sql
+stable
 security definer
 set search_path = public
 as $$
