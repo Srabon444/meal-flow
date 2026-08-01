@@ -1,58 +1,19 @@
-import { createClient } from 'npm:@supabase/supabase-js@2';
-
-// Edge functions get no CORS headers for free, and this endpoint is always
-// cross-origin (localhost:5173 / tauri:// -> 127.0.0.1:54321) with a custom
-// Authorization header, so the browser preflights every call.
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
-};
-
-const json = (body: unknown, status: number) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-  });
+import { corsHeaders, json } from '../_shared/cors.ts';
+import { requireAdmin } from '../_shared/requireAdmin.ts';
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
-  const authHeader = req.headers.get('Authorization');
-  if (!authHeader) {
-    return json({ error: 'missing authorization' }, 401);
-  }
-
-  const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-  const anonKey = Deno.env.get('SUPABASE_ANON_KEY')!;
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-
-  const callerClient = createClient(supabaseUrl, anonKey, {
-    global: { headers: { Authorization: authHeader } }
-  });
-
-  const { data: { user }, error: userError } = await callerClient.auth.getUser();
-  if (userError || !user) {
-    return json({ error: 'invalid session' }, 401);
-  }
-
-  const { data: callerProfile, error: profileError } = await callerClient
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
-  if (profileError || callerProfile?.role !== 'admin') {
-    return json({ error: 'forbidden' }, 403);
-  }
+  const auth = await requireAdmin(req);
+  if (!auth.ok) return auth.response;
+  const { adminClient } = auth;
 
   const { email, name } = await req.json();
   if (!email || !name) {
     return json({ error: 'email and name required' }, 400);
   }
-
-  const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
   // Handed back to the admin to pass on to the employee. Foundation has no
   // set-password route and no working reset-email landing page, so a disclosed
