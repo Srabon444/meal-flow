@@ -156,6 +156,32 @@ export type Database = {
           },
         ]
       }
+      ordering_pause: {
+        Row: {
+          paused_at: string
+          paused_by: string
+          paused_date: string
+        }
+        Insert: {
+          paused_at?: string
+          paused_by: string
+          paused_date: string
+        }
+        Update: {
+          paused_at?: string
+          paused_by?: string
+          paused_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ordering_pause_paused_by_fkey"
+            columns: ["paused_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payments: {
         Row: {
           amount: number
