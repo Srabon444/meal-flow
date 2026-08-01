@@ -1,9 +1,27 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 
+// Edge functions get no CORS headers for free, and this endpoint is always
+// cross-origin (localhost:5173 / tauri:// -> 127.0.0.1:54321) with a custom
+// Authorization header, so the browser preflights every call.
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type'
+};
+
+const json = (body: unknown, status: number) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+  });
+
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
+
   const authHeader = req.headers.get('Authorization');
   if (!authHeader) {
-    return new Response(JSON.stringify({ error: 'missing authorization' }), { status: 401 });
+    return json({ error: 'missing authorization' }, 401);
   }
 
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
@@ -16,7 +34,7 @@ Deno.serve(async (req) => {
 
   const { data: { user }, error: userError } = await callerClient.auth.getUser();
   if (userError || !user) {
-    return new Response(JSON.stringify({ error: 'invalid session' }), { status: 401 });
+    return json({ error: 'invalid session' }, 401);
   }
 
   const { data: callerProfile, error: profileError } = await callerClient
@@ -26,24 +44,29 @@ Deno.serve(async (req) => {
     .single();
 
   if (profileError || callerProfile?.role !== 'admin') {
-    return new Response(JSON.stringify({ error: 'forbidden' }), { status: 403 });
+    return json({ error: 'forbidden' }, 403);
   }
 
   const { email, name } = await req.json();
   if (!email || !name) {
-    return new Response(JSON.stringify({ error: 'email and name required' }), { status: 400 });
+    return json({ error: 'email and name required' }, 400);
   }
 
   const adminClient = createClient(supabaseUrl, serviceRoleKey);
 
+  // Handed back to the admin to pass on to the employee. Foundation has no
+  // set-password route and no working reset-email landing page, so a disclosed
+  // temporary password is the only way a new account can actually be logged into.
+  const tempPassword = crypto.randomUUID();
+
   const { data: created, error: createError } = await adminClient.auth.admin.createUser({
     email,
     email_confirm: true,
-    password: crypto.randomUUID()
+    password: tempPassword
   });
 
   if (createError || !created.user) {
-    return new Response(JSON.stringify({ error: createError?.message ?? 'user creation failed' }), { status: 500 });
+    return json({ error: createError?.message ?? 'user creation failed' }, 500);
   }
 
   const { error: insertError } = await adminClient
@@ -51,13 +74,11 @@ Deno.serve(async (req) => {
     .insert({ id: created.user.id, name, role: 'employee' });
 
   if (insertError) {
-    return new Response(JSON.stringify({ error: insertError.message }), { status: 500 });
+    // Otherwise the auth user is orphaned: no profile row, and the email address is
+    // now taken, so the admin can never retry the same address.
+    await adminClient.auth.admin.deleteUser(created.user.id);
+    return json({ error: insertError.message }, 500);
   }
 
-  const { error: resetError } = await adminClient.auth.resetPasswordForEmail(email);
-
-  return new Response(
-    JSON.stringify({ id: created.user.id, email, resetEmailSent: !resetError }),
-    { status: 201, headers: { 'Content-Type': 'application/json' } }
-  );
+  return json({ id: created.user.id, email, tempPassword }, 201);
 });

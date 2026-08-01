@@ -2,8 +2,9 @@ export const prerender = true;
 export const ssr = false;
 
 import { supabase } from '$lib/supabase';
-import { authStore } from '$lib/stores/auth';
-import type { Profile } from '$lib/stores/auth';
+import type { Role } from '$lib/guards';
+
+export type Profile = { id: string; name: string; role: Role };
 
 export async function load() {
   const { data: { session } } = await supabase.auth.getSession();
@@ -18,6 +19,5 @@ export async function load() {
     profile = data as Profile | null;
   }
 
-  authStore.set({ session, profile });
   return { session, profile };
 }

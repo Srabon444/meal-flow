@@ -1,37 +1,40 @@
 <script lang="ts">
   import { supabase } from '$lib/supabase';
+  import { FunctionsHttpError } from '@supabase/supabase-js';
 
   let name = $state('');
   let email = $state('');
   let result = $state('');
   let error = $state('');
 
+  // invoke() collapses every non-2xx into the same generic message; the useful one
+  // ("forbidden", "email already registered", ...) is in the un-read response body.
+  async function messageFor(err: Error): Promise<string> {
+    if (err instanceof FunctionsHttpError) {
+      const body = await err.context.json().catch(() => null);
+      if (body?.error) return body.error;
+    }
+    return err.message;
+  }
+
   async function createEmployee(e: SubmitEvent) {
     e.preventDefault();
     error = '';
     result = '';
 
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      error = 'not logged in';
+    // invoke() derives the URL from the configured client and attaches the current
+    // session's Authorization header itself.
+    const { data, error: invokeError } = await supabase.functions.invoke<{
+      id: string;
+      email: string;
+      tempPassword: string;
+    }>('admin-create-employee', { body: { name, email } });
+
+    if (invokeError) {
+      error = await messageFor(invokeError);
       return;
     }
-
-    const res = await fetch(`${import.meta.env.PUBLIC_SUPABASE_URL}/functions/v1/admin-create-employee`, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ name, email })
-    });
-
-    const body = await res.json();
-    if (!res.ok) {
-      error = body.error ?? 'failed';
-      return;
-    }
-    result = `Created ${body.email}`;
+    result = `Created ${data?.email} — temporary password: ${data?.tempPassword} (share with the employee; they should change it after first login)`;
     name = '';
     email = '';
   }
