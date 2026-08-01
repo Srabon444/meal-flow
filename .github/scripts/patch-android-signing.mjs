@@ -14,12 +14,19 @@ if (original.includes('signingConfigs')) {
   process.exit(0);
 }
 
+// `Project.java` is a Gradle Kotlin DSL accessor that shadows the `java`
+// package inside build.gradle.kts, so an inline `java.util.Properties()`
+// fails with "Unresolved reference: util" - import the class instead.
+const withImport = original.includes('import java.util.Properties')
+  ? original
+  : `import java.util.Properties\n\n${original}`;
+
 const signingConfigsBlock = `    signingConfigs {
         create("release") {
-            val props = java.util.Properties()
+            val props = Properties()
             val propsFile = rootProject.file("keystore.properties")
             if (propsFile.exists()) {
-                props.load(java.io.FileInputStream(propsFile))
+                props.load(propsFile.inputStream())
                 storeFile = rootProject.file(props["storeFile"] as String)
                 storePassword = props["password"] as String
                 keyAlias = props["keyAlias"] as String
@@ -29,8 +36,8 @@ const signingConfigsBlock = `    signingConfigs {
     }
     buildTypes {`;
 
-const withSigningConfigs = original.replace('    buildTypes {', signingConfigsBlock);
-if (withSigningConfigs === original) {
+const withSigningConfigs = withImport.replace('    buildTypes {', signingConfigsBlock);
+if (withSigningConfigs === withImport) {
   console.error('Could not find "    buildTypes {" anchor - template must have changed.');
   process.exit(1);
 }
