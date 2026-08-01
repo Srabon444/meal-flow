@@ -83,10 +83,21 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            src-tauri/gen/android/.gradle
             src-tauri/target
           key: android-cargo-${{ hashFiles('src-tauri/Cargo.lock') }}
           restore-keys: android-cargo-
+
+      # gen/android isn't committed - it's created fresh by `tauri android init` every
+      # run. Caching only its .gradle subfolder previously left a half-restored
+      # directory that made init think the project already existed and fail.
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: android-gradle-${{ hashFiles('src-tauri/gen/android/**/*.gradle*') }}
+          restore-keys: android-gradle-
 
       - uses: actions/setup-java@v4
         with:
