@@ -57,7 +57,7 @@ jobs:
           tagName: app-v__VERSION__
           releaseName: 'OfficeMeal v__VERSION__'
           releaseBody: 'See the assets below to download this version.'
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
           args: ${{ matrix.args }}
 
@@ -117,6 +117,21 @@ jobs:
       - name: Init Android project
         run: npx tauri android init
 
+      - name: Configure release signing
+        if: ${{ vars.ANDROID_SIGNING_ENABLED == 'true' }}
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > src-tauri/gen/android/release.jks
+          cat > src-tauri/gen/android/keystore.properties <<PROPS
+          password=$ANDROID_KEY_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          storeFile=release.jks
+          PROPS
+          node .github/scripts/patch-android-signing.mjs
+
       # EXPERIMENTAL: Tauri's Android build support is marked experimental upstream.
       - uses: tauri-apps/tauri-action@v1
         env:
@@ -126,5 +141,5 @@ jobs:
           tagName: app-v__VERSION__
           releaseName: 'OfficeMeal v__VERSION__'
           releaseBody: 'See the assets below to download this version.'
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
