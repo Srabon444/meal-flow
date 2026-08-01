@@ -18,6 +18,20 @@ In production, seed.sql doesn't run — bootstrap the first admin manually: crea
 user in the Supabase dashboard, then `insert into profiles (id, name, role) values
 ('<their auth user id>', '<name>', 'admin');`.
 
+## Deploying
+
+- **Database:** `npx supabase link --project-ref <ref>` once, then `npx supabase db push`
+  for any new migration and `npx supabase functions deploy` for any new/changed edge
+  function. Neither runs automatically — always a manual step after merging.
+- **Web:** Vercel is wired to this repo's GitHub integration outside this codebase —
+  pushing to `master` deploys automatically. Framework preset "Other", build command
+  `npm run build`, output directory `build` (this is `adapter-static`, not
+  `adapter-vercel`, since the same build also feeds Tauri). Needs `PUBLIC_SUPABASE_URL`
+  / `PUBLIC_SUPABASE_ANON_KEY` set in Vercel's project environment variables.
+- **Desktop/mobile:** `.github/workflows/release.yml` builds Linux/Windows/Android on
+  every push to `master` and publishes a GitHub Release. Needs the same two
+  `PUBLIC_SUPABASE_*` values as GitHub Actions repo secrets (separate from Vercel's).
+
 ## Sub-projects
 
 1. Foundation (schema, auth, scaffold) — this repo's current state

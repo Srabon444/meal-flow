@@ -170,8 +170,8 @@
           </div>
         </dl>
         <p class="mt-4 text-xs text-ink/60">
-          Share this with the employee directly — it won't be shown again. They should change it after
-          signing in.
+          Share this with the employee directly — it won't be shown again. There's no self-service
+          password change yet, so keep it safe until that's built.
         </p>
         <div class="ticket-tear mt-6 pt-4">
           <button
