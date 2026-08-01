@@ -1,5 +1,8 @@
 <script lang="ts">
   import NavRail from '$lib/components/NavRail.svelte';
+  import { page } from '$app/state';
+  import { onMount } from 'svelte';
+  import { initWebPush } from '$lib/push';
 
   let { children } = $props();
 
@@ -10,6 +13,11 @@
     { href: '/admin/employees', label: 'Employees' },
     { href: '/admin/reports', label: 'Reports' }
   ];
+
+  onMount(() => {
+    const userId = page.data.profile?.id;
+    if (userId) void initWebPush(userId);
+  });
 </script>
 
 <div class="min-h-screen">
