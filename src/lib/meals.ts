@@ -27,3 +27,18 @@ export function computeBalance(entries: Entry[], payments: Payment[]): Balance {
   const totalPaid = payments.reduce((sum, p) => sum + p.amount, 0);
   return { totalEaten, totalCost, totalPaid, due: totalCost - totalPaid };
 }
+
+export function computeBalancesByUser(
+  entries: (Entry & { user_id: string })[],
+  payments: (Payment & { user_id: string })[]
+): Record<string, Balance> {
+  const userIds = new Set([...entries.map((e) => e.user_id), ...payments.map((p) => p.user_id)]);
+  const result: Record<string, Balance> = {};
+  for (const id of userIds) {
+    result[id] = computeBalance(
+      entries.filter((e) => e.user_id === id),
+      payments.filter((p) => p.user_id === id)
+    );
+  }
+  return result;
+}
