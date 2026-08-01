@@ -238,6 +238,13 @@ export type Database = {
         }[]
       }
       is_admin: { Args: never; Returns: boolean }
+      meals_per_day: {
+        Args: { since: string }
+        Returns: {
+          entry_date: string
+          meal_count: number
+        }[]
+      }
       reject_cancel_request: {
         Args: { request_id: string }
         Returns: undefined
