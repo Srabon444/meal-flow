@@ -7,7 +7,8 @@
     { href: '/admin/dashboard', label: 'Dashboard' },
     { href: '/admin/rate', label: 'Rate' },
     { href: '/admin/cancel-requests', label: 'Requests' },
-    { href: '/admin/employees', label: 'Employees' }
+    { href: '/admin/employees', label: 'Employees' },
+    { href: '/admin/reports', label: 'Reports' }
   ];
 </script>
 
