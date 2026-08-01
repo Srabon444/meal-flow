@@ -12,7 +12,7 @@ Deno.serve(async (req) => {
 
   const { data: profiles, error: profilesError } = await adminClient
     .from('profiles')
-    .select('id, name, role, created_at')
+    .select('id, name, role, active, created_at')
     .eq('role', 'employee')
     .order('created_at', { ascending: false });
 
@@ -33,6 +33,7 @@ Deno.serve(async (req) => {
     id: p.id,
     name: p.name,
     email: emailById.get(p.id) ?? null,
+    active: p.active,
     createdAt: p.created_at
   }));
 

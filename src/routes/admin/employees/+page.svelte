@@ -4,7 +4,7 @@
   import { onMount } from 'svelte';
   import type { Balance } from '$lib/meals';
 
-  type Employee = { id: string; name: string; email: string | null; createdAt: string };
+  type Employee = { id: string; name: string; email: string | null; active: boolean; createdAt: string };
 
   let name = $state('');
   let email = $state('');
@@ -18,6 +18,7 @@
   let listError = $state('');
   let removingId = $state<string | null>(null);
   let removeError = $state('');
+  let togglingId = $state<string | null>(null);
 
   let payingId = $state<string | null>(null);
   let paymentAmount = $state('');
@@ -98,17 +99,33 @@
     created = null;
   }
 
-  async function confirmRemove(id: string) {
+  async function confirmDeactivate(id: string) {
     removeError = '';
-    const { error: invokeError } = await supabase.functions.invoke('admin-delete-employee', {
-      body: { id }
+    togglingId = id;
+    const { error: invokeError } = await supabase.functions.invoke('admin-set-employee-active', {
+      body: { id, active: false }
     });
+    togglingId = null;
     removingId = null;
     if (invokeError) {
       removeError = await messageFor(invokeError);
       return;
     }
-    employees = employees.filter((emp) => emp.id !== id);
+    employees = employees.map((emp) => (emp.id === id ? { ...emp, active: false } : emp));
+  }
+
+  async function reactivate(id: string) {
+    removeError = '';
+    togglingId = id;
+    const { error: invokeError } = await supabase.functions.invoke('admin-set-employee-active', {
+      body: { id, active: true }
+    });
+    togglingId = null;
+    if (invokeError) {
+      removeError = await messageFor(invokeError);
+      return;
+    }
+    employees = employees.map((emp) => (emp.id === id ? { ...emp, active: true } : emp));
   }
 
   function startPayment(id: string) {
@@ -249,42 +266,60 @@
           <li class="py-3">
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <p class="text-sm font-medium">{emp.name}</p>
+                <p class="text-sm font-medium">
+                  {emp.name}
+                  {#if !emp.active}
+                    <span class="font-display text-[10px] tracking-widest text-ink/40 uppercase ml-1"
+                      >· inactive</span
+                    >
+                  {/if}
+                </p>
                 <p class="text-xs text-ink/50">{emp.email ?? '—'}</p>
                 <p class="text-xs text-ink/50">
                   eaten {bal?.totalEaten ?? 0} · due {(bal?.due ?? 0).toFixed(2)}
                 </p>
               </div>
               <div class="flex items-center gap-3">
-                {#if payingId !== emp.id}
+                {#if !emp.active}
                   <button
-                    onclick={() => startPayment(emp.id)}
-                    class="font-display text-[11px] tracking-widest uppercase text-sage hover:opacity-70"
+                    onclick={() => reactivate(emp.id)}
+                    disabled={togglingId === emp.id}
+                    class="font-display text-[11px] tracking-widest uppercase text-sage hover:opacity-70 disabled:opacity-50"
                   >
-                    Record payment
-                  </button>
-                {/if}
-                {#if removingId === emp.id}
-                  <span class="font-display text-[11px] tracking-widest text-stamp uppercase">Remove?</span>
-                  <button
-                    onclick={() => confirmRemove(emp.id)}
-                    class="font-display text-[11px] tracking-widest uppercase text-stamp hover:text-stamp-dark"
-                  >
-                    Confirm
-                  </button>
-                  <button
-                    onclick={() => (removingId = null)}
-                    class="font-display text-[11px] tracking-widest uppercase text-ink/40 hover:text-ink"
-                  >
-                    Cancel
+                    {togglingId === emp.id ? 'Saving…' : 'Reactivate'}
                   </button>
                 {:else}
-                  <button
-                    onclick={() => (removingId = emp.id)}
-                    class="font-display text-[11px] tracking-widest uppercase text-ink/40 hover:text-stamp transition-colors"
-                  >
-                    Remove
-                  </button>
+                  {#if payingId !== emp.id}
+                    <button
+                      onclick={() => startPayment(emp.id)}
+                      class="font-display text-[11px] tracking-widest uppercase text-sage hover:opacity-70"
+                    >
+                      Record payment
+                    </button>
+                  {/if}
+                  {#if removingId === emp.id}
+                    <span class="font-display text-[11px] tracking-widest text-stamp uppercase">Deactivate?</span>
+                    <button
+                      onclick={() => confirmDeactivate(emp.id)}
+                      disabled={togglingId === emp.id}
+                      class="font-display text-[11px] tracking-widest uppercase text-stamp hover:text-stamp-dark disabled:opacity-50"
+                    >
+                      {togglingId === emp.id ? 'Saving…' : 'Confirm'}
+                    </button>
+                    <button
+                      onclick={() => (removingId = null)}
+                      class="font-display text-[11px] tracking-widest uppercase text-ink/40 hover:text-ink"
+                    >
+                      Cancel
+                    </button>
+                  {:else}
+                    <button
+                      onclick={() => (removingId = emp.id)}
+                      class="font-display text-[11px] tracking-widest uppercase text-ink/40 hover:text-stamp transition-colors"
+                    >
+                      Deactivate
+                    </button>
+                  {/if}
                 {/if}
               </div>
             </div>
