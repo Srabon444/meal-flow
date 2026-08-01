@@ -34,6 +34,8 @@
     if (failed) {
       loadError = failed.message;
       loading = false;
+      donutChart?.destroy();
+      donutChart = null;
       return;
     }
 
