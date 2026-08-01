@@ -247,7 +247,7 @@
         {#each employees as emp (emp.id)}
           {@const bal = balances[emp.id]}
           <li class="py-3">
-            <div class="flex items-center justify-between">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p class="text-sm font-medium">{emp.name}</p>
                 <p class="text-xs text-ink/50">{emp.email ?? '—'}</p>
@@ -289,19 +289,19 @@
               </div>
             </div>
             {#if payingId === emp.id}
-              <div class="mt-2 flex items-center gap-2">
+              <div class="mt-2 flex flex-wrap items-center gap-2">
                 <input
                   type="number"
                   step="0.01"
                   min="0"
                   bind:value={paymentAmount}
                   placeholder="Amount"
-                  class="w-28 border-b-2 border-line bg-transparent py-1 text-sm outline-none focus:border-stamp transition-colors"
+                  class="w-24 border-b-2 border-line bg-transparent py-1 text-sm outline-none focus:border-stamp transition-colors"
                 />
                 <input
                   bind:value={paymentNote}
                   placeholder="Note (optional)"
-                  class="flex-1 border-b-2 border-line bg-transparent py-1 text-sm outline-none focus:border-stamp transition-colors"
+                  class="min-w-0 flex-1 border-b-2 border-line bg-transparent py-1 text-sm outline-none focus:border-stamp transition-colors"
                 />
                 <button
                   onclick={() => submitPayment(emp.id)}

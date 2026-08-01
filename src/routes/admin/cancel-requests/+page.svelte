@@ -81,7 +81,7 @@
 {:else}
   <ul class="divide-y divide-line border-t border-b border-line">
     {#each requests as req (req.id)}
-      <li class="py-3 flex items-center justify-between">
+      <li class="py-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p class="text-sm font-medium">
             {names[req.requested_by] ?? 'Unknown'} — {entryDates[req.meal_entry_id] ?? '—'}

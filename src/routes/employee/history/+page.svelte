@@ -94,7 +94,7 @@
     {#each entries as entry (entry.id)}
       {@const existingRequest = requestedFor(entry.id)}
       <li class="py-3">
-        <div class="flex items-center justify-between">
+        <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p class="text-sm font-medium">{entry.entry_date}</p>
             <p class="text-xs text-ink/50">
