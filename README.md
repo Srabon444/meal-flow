@@ -57,8 +57,9 @@ merging to `master`.
 
 Employees get a push at 9am (Asia/Dhaka) if they haven't ordered yet; admins get
 one at 10:30am if ordering is still open. Real push for web/desktop; Android
-shows the same reminder only while the app is open (see "Making this repo
-public" below for why — no Firebase project is used).
+shows the same reminder only while the app is open — Tauri has no official
+Firebase Cloud Messaging plugin, so true background push on Android is out of
+scope for now.
 
 1. **Generate a VAPID keypair** (needed once):
    ```bash
