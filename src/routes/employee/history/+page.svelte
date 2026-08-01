@@ -20,6 +20,7 @@
   let requestingId = $state<string | null>(null);
   let reason = $state('');
   let error = $state('');
+  let submitting = $state(false);
 
   async function load() {
     loading = true;
@@ -53,10 +54,13 @@
   }
 
   async function submitRequest(entryId: string) {
+    if (submitting) return;
+    submitting = true;
     error = '';
     const { error: insertError } = await supabase
       .from('cancel_requests')
       .insert({ meal_entry_id: entryId, requested_by: userId, reason: reason || null });
+    submitting = false;
     if (insertError) {
       error = insertError.message;
       return;
@@ -93,13 +97,15 @@
               <div class="flex items-center gap-2">
                 <button
                   onclick={() => submitRequest(entry.id)}
-                  class="font-display text-[11px] tracking-widest uppercase text-stamp hover:text-stamp-dark"
+                  disabled={submitting}
+                  class="font-display text-[11px] tracking-widest uppercase text-stamp hover:text-stamp-dark disabled:opacity-50"
                 >
-                  Submit
+                  {submitting ? 'Submitting…' : 'Submit'}
                 </button>
                 <button
                   onclick={() => (requestingId = null)}
-                  class="font-display text-[11px] tracking-widest uppercase text-ink/40 hover:text-ink"
+                  disabled={submitting}
+                  class="font-display text-[11px] tracking-widest uppercase text-ink/40 hover:text-ink disabled:opacity-50"
                 >
                   Cancel
                 </button>
