@@ -53,6 +53,35 @@ merging to `master`.
   `PUBLIC_SUPABASE_*` values set as GitHub Actions **repo secrets** (Settings → Secrets
   and variables → Actions) — separate from Vercel's copies, same values.
 
+## Push reminders setup
+
+Employees get a push at 9am (Asia/Dhaka) if they haven't ordered yet; admins get
+one at 10:30am if ordering is still open. Real push for web/desktop; Android
+shows the same reminder only while the app is open (see "Making this repo
+public" below for why — no Firebase project is used).
+
+1. **Generate a VAPID keypair** (needed once):
+   ```bash
+   npx web-push generate-vapid-keys
+   ```
+2. **Frontend public key** — add to Vercel's project environment variables and
+   to this repo's GitHub Actions secrets (Settings → Secrets and variables →
+   Actions):
+   - `PUBLIC_VAPID_PUBLIC_KEY` — the "Public Key" from step 1
+3. **Edge function secrets** — `npx supabase secrets set`:
+   - `VAPID_PUBLIC_KEY` — same public key as above
+   - `VAPID_PRIVATE_KEY` — the "Private Key" from step 1
+   - `VAPID_SUBJECT` — `mailto:<your admin email>`
+   - `CRON_SECRET` — any random string, e.g. `openssl rand -hex 32`
+4. **Deploy the function:** `npx supabase functions deploy send-reminders`
+5. **Schedule the two cron jobs** — Supabase Dashboard → Database → Cron Jobs
+   → Create job, twice:
+   - Name `employee-reminder`, schedule `0 3 * * *` (9:00 Asia/Dhaka), HTTP
+     request to `https://<project-ref>.supabase.co/functions/v1/send-reminders`,
+     header `x-cron-secret: <the CRON_SECRET value>`, body `{"kind":"employee-reminder"}`
+   - Name `admin-reminder`, schedule `30 4 * * *` (10:30 Asia/Dhaka), same URL
+     and header, body `{"kind":"admin-reminder"}`
+
 ## Signing the Android build
 
 Without this, the CI-built APK is unsigned and every install shows an "unknown app"
