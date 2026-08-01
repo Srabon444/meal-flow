@@ -1,1 +1,47 @@
 @import 'tailwindcss';
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Public+Sans:wght@400;500;600;700&display=swap');
+
+@theme {
+  --color-paper: #f7f0e4;
+  --color-ink: #2b2622;
+  --color-stamp: #c4432b;
+  --color-stamp-dark: #a3341f;
+  --color-turmeric: #d69a2d;
+  --color-sage: #5b7553;
+  --color-line: #ddd3c0;
+
+  --font-display: 'Space Mono', ui-monospace, monospace;
+  --font-body: 'Public Sans', ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+}
+
+/* Signature element: a perforated ticket stub - dashed tear edge with punched
+   notches, used sparingly (login card, create-employee success ticket). */
+.ticket {
+  position: relative;
+  background: #fffdf8;
+  border: 1px solid var(--color-line);
+  border-radius: 2px;
+  box-shadow: 0 1px 2px rgba(43, 38, 34, 0.06), 0 8px 24px rgba(43, 38, 34, 0.08);
+}
+
+.ticket::before {
+  content: '';
+  position: absolute;
+  top: -9px;
+  left: 0;
+  right: 0;
+  height: 18px;
+  background:
+    radial-gradient(circle at 16px 9px, transparent 6px, #fffdf8 6.5px) top left / 32px 18px repeat-x,
+    radial-gradient(circle at 16px 9px, transparent 6px, var(--color-line) 6.5px, transparent 7.5px) top left / 32px 18px repeat-x;
+}
+
+.ticket-tear {
+  border-top: 2px dashed var(--color-line);
+}
