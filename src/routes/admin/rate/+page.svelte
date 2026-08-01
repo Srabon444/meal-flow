@@ -1,11 +1,12 @@
 <script lang="ts">
   import { supabase } from '$lib/supabase';
   import { onMount } from 'svelte';
+  import { localToday, pickActiveRate } from '$lib/meals';
 
   type RateRow = { id: string; rate: number; effective_from: string; created_at: string };
 
   let rate = $state('');
-  let effectiveFrom = $state(new Date().toLocaleDateString('en-CA'));
+  let effectiveFrom = $state(localToday());
   let history = $state<RateRow[]>([]);
   let loading = $state(true);
   let loadError = $state('');
@@ -18,7 +19,10 @@
     const { data, error: selectError } = await supabase
       .from('meal_rates')
       .select('id, rate, effective_from, created_at')
-      .order('effective_from', { ascending: false });
+      // Same tie-break as pickActiveRate and the enforcement trigger, so a
+      // same-day correction shows on top instead of under the rate it replaced.
+      .order('effective_from', { ascending: false })
+      .order('created_at', { ascending: false });
     if (selectError) {
       loadError = selectError.message;
       loading = false;
@@ -30,6 +34,16 @@
 
   onMount(load);
 
+  // Which row the enforcement trigger would actually charge today. pickActiveRate
+  // owns the same-day tie-break; history is ordered the same way, so the first
+  // row at that rate on/before today is the one it picked.
+  const activeRateId = $derived.by(() => {
+    const today = localToday();
+    const active = pickActiveRate(history, today);
+    if (active === null) return null;
+    return history.find((r) => r.effective_from <= today && r.rate === active)?.id ?? null;
+  });
+
   async function submitRate(e: SubmitEvent) {
     e.preventDefault();
     if (submitting) return;
@@ -38,9 +52,14 @@
     const {
       data: { user }
     } = await supabase.auth.getUser();
+    if (!user) {
+      error = 'Session expired — sign in again.';
+      submitting = false;
+      return;
+    }
     const { error: insertError } = await supabase
       .from('meal_rates')
-      .insert({ rate: Number(rate), effective_from: effectiveFrom, created_by: user!.id });
+      .insert({ rate: Number(rate), effective_from: effectiveFrom, created_by: user.id });
     submitting = false;
     if (insertError) {
       error = insertError.message;
@@ -105,7 +124,12 @@
       <ul class="divide-y divide-line border-t border-b border-line">
         {#each history as row (row.id)}
           <li class="py-3 flex items-center justify-between text-sm">
-            <span>Effective {row.effective_from}</span>
+            <span>
+              Effective {row.effective_from}
+              {#if row.id === activeRateId}
+                <span class="ml-2 font-display text-[11px] tracking-widest text-sage uppercase">Current</span>
+              {/if}
+            </span>
             <span class="font-display">{row.rate.toFixed(2)}</span>
           </li>
         {/each}

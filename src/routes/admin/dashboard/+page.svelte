@@ -1,10 +1,11 @@
 <script lang="ts">
   import { supabase } from '$lib/supabase';
   import { onMount } from 'svelte';
+  import { localToday } from '$lib/meals';
 
   type Row = { id: string; user_id: string; profiles: { name: string } | null };
 
-  let selectedDate = $state(new Date().toLocaleDateString('en-CA'));
+  let selectedDate = $state(localToday());
   let rows = $state<Row[]>([]);
   let loading = $state(true);
   let loadError = $state('');
