@@ -12,12 +12,16 @@
   }
 
   async function signOut() {
-    if ('serviceWorker' in navigator) {
-      const registration = await navigator.serviceWorker.getRegistration();
-      const subscription = await registration?.pushManager.getSubscription();
-      if (subscription) {
-        await supabase.from('push_subscriptions').delete().eq('endpoint', subscription.endpoint);
+    try {
+      if ('serviceWorker' in navigator) {
+        const registration = await navigator.serviceWorker.getRegistration();
+        const subscription = await registration?.pushManager.getSubscription();
+        if (subscription) {
+          await supabase.from('push_subscriptions').delete().eq('endpoint', subscription.endpoint);
+        }
       }
+    } catch {
+      // Best-effort cleanup - a push API failure here must never block sign-out.
     }
     await supabase.auth.signOut();
     await goto('/login');
