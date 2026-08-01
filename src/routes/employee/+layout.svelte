@@ -4,8 +4,8 @@
   let { children } = $props();
 
   const links = [
-    { href: '/admin/dashboard', label: 'Dashboard' },
-    { href: '/admin/employees', label: 'Employees' }
+    { href: '/employee/dashboard', label: 'Dashboard' },
+    { href: '/employee/history', label: 'History' }
   ];
 </script>
 
