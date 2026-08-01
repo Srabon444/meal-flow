@@ -18,7 +18,7 @@
   onMount(() => {
     const userId = page.data.profile?.id;
     if (userId) {
-      void initWebPush(userId);
+      initWebPush(userId).catch((e) => console.error('push init failed', e));
       stopAndroidReminders = initAndroidReminders(userId, 'employee');
     }
   });

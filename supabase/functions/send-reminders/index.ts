@@ -14,12 +14,6 @@ Deno.serve(async (req) => {
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
   const client = createClient(supabaseUrl, serviceRoleKey);
 
-  webpush.setVapidDetails(
-    Deno.env.get('VAPID_SUBJECT') ?? 'mailto:admin@example.com',
-    Deno.env.get('VAPID_PUBLIC_KEY')!,
-    Deno.env.get('VAPID_PRIVATE_KEY')!
-  );
-
   const body = await req.json().catch(() => ({ kind: null }));
   const kind = body.kind;
   if (kind !== 'employee-reminder' && kind !== 'admin-reminder') {
@@ -28,6 +22,12 @@ Deno.serve(async (req) => {
       { status: 400 }
     );
   }
+
+  webpush.setVapidDetails(
+    Deno.env.get('VAPID_SUBJECT') ?? 'mailto:admin@example.com',
+    Deno.env.get('VAPID_PUBLIC_KEY')!,
+    Deno.env.get('VAPID_PRIVATE_KEY')!
+  );
 
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Dhaka' });
   let targetUserIds: string[] = [];
@@ -58,7 +58,11 @@ Deno.serve(async (req) => {
     if (pauseRow) {
       return new Response(JSON.stringify({ sent: 0, reason: 'already paused' }), { status: 200 });
     }
-    const { data: admins, error: adminsError } = await client.from('profiles').select('id').eq('role', 'admin');
+    const { data: admins, error: adminsError } = await client
+      .from('profiles')
+      .select('id')
+      .eq('role', 'admin')
+      .eq('active', true);
     if (adminsError) {
       return new Response(JSON.stringify({ error: adminsError.message }), { status: 500 });
     }
@@ -85,6 +89,7 @@ Deno.serve(async (req) => {
 
   let sent = 0;
   const staleIds: string[] = [];
+  let failed = 0;
   for (const sub of subscriptions ?? []) {
     try {
       await webpush.sendNotification(
@@ -94,7 +99,12 @@ Deno.serve(async (req) => {
       sent++;
     } catch (err) {
       const statusCode = (err as { statusCode?: number }).statusCode;
-      if (statusCode === 404 || statusCode === 410) staleIds.push(sub.id);
+      if (statusCode === 404 || statusCode === 410) {
+        staleIds.push(sub.id);
+      } else {
+        failed++;
+        console.error('push send failed', sub.id, err);
+      }
     }
   }
 
@@ -102,5 +112,5 @@ Deno.serve(async (req) => {
     await client.from('push_subscriptions').delete().in('id', staleIds);
   }
 
-  return new Response(JSON.stringify({ sent, stale: staleIds.length }), { status: 200 });
+  return new Response(JSON.stringify({ sent, stale: staleIds.length, failed }), { status: 200 });
 });

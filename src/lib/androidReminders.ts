@@ -40,11 +40,15 @@ async function checkEmployeeReminder(userId: string): Promise<void> {
     .eq('status', 'CONFIRMED')
     .maybeSingle();
   if (!data) {
-    await notifyOnce('officemeal-employee-reminder', 'OfficeMeal', "You haven't ordered today yet.");
+    await notifyOnce(
+      `officemeal-employee-reminder-${userId}`,
+      'OfficeMeal',
+      "You haven't ordered today yet."
+    );
   }
 }
 
-async function checkAdminReminder(): Promise<void> {
+async function checkAdminReminder(userId: string): Promise<void> {
   const now = new Date();
   if (now.getHours() < 10 || (now.getHours() === 10 && now.getMinutes() < 30)) return;
   const today = localToday();
@@ -54,7 +58,11 @@ async function checkAdminReminder(): Promise<void> {
     .eq('paused_date', today)
     .maybeSingle();
   if (!data) {
-    await notifyOnce('officemeal-admin-reminder', 'OfficeMeal', 'Ordering is still open — close it if needed.');
+    await notifyOnce(
+      `officemeal-admin-reminder-${userId}`,
+      'OfficeMeal',
+      'Ordering is still open — close it if needed.'
+    );
   }
 }
 
@@ -65,7 +73,7 @@ export function initAndroidReminders(userId: string, role: 'employee' | 'admin')
   if (!isTauriAndroid()) return () => {};
   const check = () => {
     if (role === 'employee') void checkEmployeeReminder(userId);
-    else void checkAdminReminder();
+    else void checkAdminReminder(userId);
   };
   check();
   const interval = setInterval(check, 15 * 60 * 1000);

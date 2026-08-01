@@ -12,6 +12,13 @@
   }
 
   async function signOut() {
+    if ('serviceWorker' in navigator) {
+      const registration = await navigator.serviceWorker.getRegistration();
+      const subscription = await registration?.pushManager.getSubscription();
+      if (subscription) {
+        await supabase.from('push_subscriptions').delete().eq('endpoint', subscription.endpoint);
+      }
+    }
     await supabase.auth.signOut();
     await goto('/login');
   }

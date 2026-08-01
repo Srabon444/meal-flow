@@ -11,7 +11,9 @@ for sub-project designs.
 2. `npx supabase start` (requires Docker running — pulls images on first run, can take
    a few minutes)
 3. Copy `.env.example` to `.env`, fill in `PUBLIC_SUPABASE_URL` / `PUBLIC_SUPABASE_ANON_KEY`
-   from `npx supabase status`
+   from `npx supabase status`; also set `PUBLIC_VAPID_PUBLIC_KEY` to any non-empty value
+   (a throwaway string works locally — `npm run build`/`npm run check` fail without it,
+   see "Push reminders setup" for the real value)
 4. `npm run dev` for web, or `npm run tauri dev` for the desktop shell
 
 `supabase db reset` seeds one admin account (`admin@example.com` / `admin1234`) via
@@ -45,21 +47,34 @@ merging to `master`.
 - **Web:** Vercel is wired to this repo's GitHub integration outside this codebase —
   pushing to `master` deploys automatically. Framework preset "Other", build command
   `npm run build`, output directory `build`. Needs `PUBLIC_SUPABASE_URL` /
-  `PUBLIC_SUPABASE_ANON_KEY` set in Vercel's project environment variables.
+  `PUBLIC_SUPABASE_ANON_KEY` / `PUBLIC_VAPID_PUBLIC_KEY` set in Vercel's project
+  environment variables.
 - **Desktop/mobile:** `.github/workflows/release.yml` builds Linux, Windows, and
   Android on every push to `master` and publishes a GitHub Release (`app-v<version>`,
   taken from `src-tauri/tauri.conf.json`'s `version` field — bump it before a release
-  push if you want a new tag rather than updating the existing one). Needs the same two
-  `PUBLIC_SUPABASE_*` values set as GitHub Actions **repo secrets** (Settings → Secrets
-  and variables → Actions) — separate from Vercel's copies, same values.
+  push if you want a new tag rather than updating the existing one). Needs the same
+  three `PUBLIC_SUPABASE_*` / `PUBLIC_VAPID_PUBLIC_KEY` values set as GitHub Actions
+  **repo secrets** (Settings → Secrets and variables → Actions) — separate from
+  Vercel's copies, same values.
 
 ## Push reminders setup
 
+**Set `PUBLIC_VAPID_PUBLIC_KEY` in Vercel and in GitHub Actions repo secrets
+BEFORE merging this branch to `master`** — `src/lib/push.ts` imports it from
+`$env/static/public`, and SvelteKit only emits an export for an env var that's
+actually set, so an unset value is a build-time Rollup error on Vercel (the
+deploy fails outright), while an empty-string GitHub Actions secret still
+counts as "set" and just ships a silently no-op push feature. This is the
+general rule for every env var this branch introduces: they need to exist
+pre-merge, not as a manual post-merge checklist item — unlike the rest of the
+Release section below, a fresh build depends on this one at compile time.
+
 Employees get a push at 9am (Asia/Dhaka) if they haven't ordered yet; admins get
-one at 10:30am if ordering is still open. Real push for web/desktop; Android
-shows the same reminder only while the app is open — Tauri has no official
-Firebase Cloud Messaging plugin, so true background push on Android is out of
-scope for now.
+one at 10:30am if ordering is still open. Real push for the web app. Desktop
+and Android builds currently show no reminder in the background — Android gets
+an in-app reminder only while the app is open (Tauri has no Firebase Cloud
+Messaging plugin for true background push); desktop's webview generally lacks
+push service support.
 
 1. **Generate a VAPID keypair** (needed once):
    ```bash
