@@ -35,3 +35,8 @@ from auth.users where email = 'admin@example.com';
 
 insert into public.profiles (id, name, role)
 select id, 'Admin', 'admin' from auth.users where email = 'admin@example.com';
+
+-- Without an active rate, meal_entries_enforce_invariants rejects every insert
+-- (including verify-rls.mjs's own fixture row) - seed one so a clean reset works.
+insert into public.meal_rates (rate, effective_from, created_by)
+select 100, '2026-01-01', id from auth.users where email = 'admin@example.com';
