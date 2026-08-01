@@ -2,7 +2,7 @@
   import { supabase } from '$lib/supabase';
   import { FunctionsHttpError } from '@supabase/supabase-js';
   import { onMount } from 'svelte';
-  import { computeBalancesByUser, type Balance } from '$lib/meals';
+  import type { Balance } from '$lib/meals';
 
   type Employee = { id: string; name: string; email: string | null; createdAt: string };
 
@@ -47,11 +47,25 @@
     }
     employees = data?.employees ?? [];
 
-    const [entriesRes, paymentsRes] = await Promise.all([
-      supabase.from('meal_entries').select('user_id, rate_applied, status').eq('status', 'CONFIRMED'),
-      supabase.from('payments').select('user_id, amount')
-    ]);
-    balances = computeBalancesByUser(entriesRes.data ?? [], paymentsRes.data ?? []);
+    // Aggregated in Postgres, not here: fetching every meal_entries/payments row
+    // silently truncated at PostgREST's max_rows (1000) and under-reported dues.
+    const { data: balanceRows, error: balanceError } = await supabase.rpc('employee_balances');
+    if (balanceError) {
+      listError = balanceError.message;
+      listLoading = false;
+      return;
+    }
+    balances = Object.fromEntries(
+      (balanceRows ?? []).map((r) => [
+        r.user_id,
+        {
+          totalEaten: r.total_eaten,
+          totalCost: Number(r.total_cost),
+          totalPaid: Number(r.total_paid),
+          due: Number(r.total_cost) - Number(r.total_paid)
+        }
+      ])
+    );
     listLoading = false;
   }
 
@@ -106,14 +120,25 @@
 
   async function submitPayment(id: string) {
     if (paymentSubmitting) return;
-    paymentSubmitting = true;
     paymentError = '';
+    // min="0" on the input is inert - these fields aren't in a <form> and Save
+    // is a plain onclick, so nothing validates. Mirrored by a DB check constraint.
+    if (!(Number(paymentAmount) > 0)) {
+      paymentError = 'Enter an amount greater than 0.';
+      return;
+    }
+    paymentSubmitting = true;
     const {
       data: { user }
     } = await supabase.auth.getUser();
+    if (!user) {
+      paymentError = 'Session expired — sign in again.';
+      paymentSubmitting = false;
+      return;
+    }
     const { error: insertError } = await supabase
       .from('payments')
-      .insert({ user_id: id, amount: Number(paymentAmount), note: paymentNote || null, recorded_by: user!.id });
+      .insert({ user_id: id, amount: Number(paymentAmount), note: paymentNote || null, recorded_by: user.id });
     paymentSubmitting = false;
     if (insertError) {
       paymentError = insertError.message;

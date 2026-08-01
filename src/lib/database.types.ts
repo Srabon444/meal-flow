@@ -224,7 +224,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      approve_cancel_request: {
+        Args: { request_id: string }
+        Returns: undefined
+      }
+      employee_balances: {
+        Args: never
+        Returns: {
+          total_cost: number
+          total_eaten: number
+          total_paid: number
+          user_id: string
+        }[]
+      }
       is_admin: { Args: never; Returns: boolean }
+      reject_cancel_request: {
+        Args: { request_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

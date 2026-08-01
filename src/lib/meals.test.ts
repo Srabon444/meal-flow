@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { pickActiveRate, computeBalance, localToday, computeBalancesByUser } from './meals';
+import { pickActiveRate, computeBalance, localToday } from './meals';
 
 describe('pickActiveRate', () => {
   it('returns null when no rates exist', () => {
@@ -57,24 +57,5 @@ describe('computeBalance', () => {
     const entries = [{ rate_applied: 100, status: 'CONFIRMED' }];
     const payments = [{ amount: 60 }];
     expect(computeBalance(entries, payments)).toEqual({ totalEaten: 1, totalCost: 100, totalPaid: 60, due: 40 });
-  });
-});
-
-describe('computeBalancesByUser', () => {
-  it('groups entries and payments by user_id independently', () => {
-    const entries = [
-      { user_id: 'a', rate_applied: 100, status: 'CONFIRMED' },
-      { user_id: 'b', rate_applied: 200, status: 'CONFIRMED' },
-      { user_id: 'a', rate_applied: 100, status: 'CANCELLED' }
-    ];
-    const payments = [{ user_id: 'a', amount: 50 }];
-    const result = computeBalancesByUser(entries, payments);
-    expect(result['a']).toEqual({ totalEaten: 1, totalCost: 100, totalPaid: 50, due: 50 });
-    expect(result['b']).toEqual({ totalEaten: 1, totalCost: 200, totalPaid: 0, due: 200 });
-  });
-
-  it('includes a user who only has payments and no entries', () => {
-    const result = computeBalancesByUser([], [{ user_id: 'c', amount: 30 }]);
-    expect(result['c']).toEqual({ totalEaten: 0, totalCost: 0, totalPaid: 30, due: -30 });
   });
 });
