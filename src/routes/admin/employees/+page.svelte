@@ -5,6 +5,7 @@
   import type { Balance } from '$lib/meals';
 
   type Employee = { id: string; name: string; email: string | null; active: boolean; createdAt: string };
+  type HistoryRow = { date: string; kind: 'meal' | 'payment'; detail: string; amount: number };
 
   let name = $state('');
   let email = $state('');
@@ -25,6 +26,11 @@
   let paymentNote = $state('');
   let paymentSubmitting = $state(false);
   let paymentError = $state('');
+
+  let expandedId = $state<string | null>(null);
+  let historyByEmployee = $state<Record<string, HistoryRow[]>>({});
+  let historyLoading = $state<string | null>(null);
+  let historyError = $state<Record<string, string>>({});
 
   async function messageFor(err: Error): Promise<string> {
     if (err instanceof FunctionsHttpError) {
@@ -164,6 +170,57 @@
     payingId = null;
     await loadEmployees();
   }
+
+  async function toggleHistory(id: string) {
+    if (expandedId === id) {
+      expandedId = null;
+      return;
+    }
+    expandedId = id;
+    if (historyByEmployee[id]) return;
+
+    historyLoading = id;
+    // Scoped to one employee, bounded by .limit() - not the all-employees
+    // unbounded fetch that caused silent truncation elsewhere in this app.
+    const [entriesRes, paymentsRes] = await Promise.all([
+      supabase
+        .from('meal_entries')
+        .select('entry_date, status, rate_applied')
+        .eq('user_id', id)
+        .order('entry_date', { ascending: false })
+        .limit(365),
+      supabase
+        .from('payments')
+        .select('paid_at, amount, note')
+        .eq('user_id', id)
+        .order('paid_at', { ascending: false })
+        .limit(365)
+    ]);
+    historyLoading = null;
+
+    const failed = entriesRes.error ?? paymentsRes.error;
+    if (failed) {
+      historyError = { ...historyError, [id]: failed.message };
+      return;
+    }
+
+    const rows: HistoryRow[] = [
+      ...(entriesRes.data ?? []).map((e) => ({
+        date: e.entry_date,
+        kind: 'meal' as const,
+        detail: e.status,
+        amount: e.rate_applied
+      })),
+      ...(paymentsRes.data ?? []).map((p) => ({
+        date: p.paid_at,
+        kind: 'payment' as const,
+        detail: p.note ?? 'Payment',
+        amount: p.amount
+      }))
+    ].sort((a, b) => (a.date < b.date ? 1 : -1));
+
+    historyByEmployee = { ...historyByEmployee, [id]: rows };
+  }
 </script>
 
 <div class="mb-8">
@@ -265,19 +322,32 @@
           {@const bal = balances[emp.id]}
           <li class="py-3">
             <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p class="text-sm font-medium">
-                  {emp.name}
-                  {#if !emp.active}
-                    <span class="font-display text-[10px] tracking-widest text-ink/40 uppercase ml-1"
-                      >· inactive</span
-                    >
-                  {/if}
-                </p>
-                <p class="text-xs text-ink/50">{emp.email ?? '—'}</p>
-                <p class="text-xs text-ink/50">
-                  eaten {bal?.totalEaten ?? 0} · due {(bal?.due ?? 0).toFixed(2)}
-                </p>
+              <div class="flex items-start gap-2">
+                <button
+                  onclick={() => toggleHistory(emp.id)}
+                  class="mt-0.5 font-display text-[10px] text-ink/40 hover:text-ink transition-transform shrink-0 {expandedId ===
+                  emp.id
+                    ? ''
+                    : '-rotate-90'}"
+                  aria-label={expandedId === emp.id ? 'Collapse history' : 'Expand history'}
+                  aria-expanded={expandedId === emp.id}
+                >
+                  ▾
+                </button>
+                <div>
+                  <p class="text-sm font-medium">
+                    {emp.name}
+                    {#if !emp.active}
+                      <span class="font-display text-[10px] tracking-widest text-ink/40 uppercase ml-1"
+                        >· inactive</span
+                      >
+                    {/if}
+                  </p>
+                  <p class="text-xs text-ink/50">{emp.email ?? '—'}</p>
+                  <p class="text-xs text-ink/50">
+                    eaten {bal?.totalEaten ?? 0} · due {(bal?.due ?? 0).toFixed(2)}
+                  </p>
+                </div>
               </div>
               <div class="flex items-center gap-3">
                 {#if !emp.active}
@@ -323,6 +393,33 @@
                 {/if}
               </div>
             </div>
+
+            {#if expandedId === emp.id}
+              <div class="mt-3 ml-6 border-l-2 border-line pl-4">
+                {#if historyLoading === emp.id}
+                  <p class="text-xs text-ink/50">Loading…</p>
+                {:else if historyError[emp.id]}
+                  <p class="text-xs text-stamp-dark">{historyError[emp.id]}</p>
+                {:else if (historyByEmployee[emp.id] ?? []).length === 0}
+                  <p class="text-xs text-ink/50">No history yet.</p>
+                {:else}
+                  <ul class="space-y-1.5">
+                    {#each historyByEmployee[emp.id] as row (row.date + row.kind + row.amount)}
+                      <li class="flex items-center gap-3 text-xs">
+                        <span class="font-display text-ink/50 shrink-0">{row.date.slice(0, 10)}</span>
+                        <span class="min-w-0 flex-1 truncate text-ink/70">
+                          {row.kind === 'meal' ? `Meal — ${row.detail.toLowerCase()}` : row.detail}
+                        </span>
+                        <span class="font-display shrink-0 {row.kind === 'payment' ? 'text-sage' : 'text-ink'}">
+                          {row.kind === 'payment' ? '+' : ''}{row.amount.toFixed(2)}
+                        </span>
+                      </li>
+                    {/each}
+                  </ul>
+                {/if}
+              </div>
+            {/if}
+
             {#if payingId === emp.id}
               <div class="mt-2 flex flex-wrap items-center gap-2">
                 <input
