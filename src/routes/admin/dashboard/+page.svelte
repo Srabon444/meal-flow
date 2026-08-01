@@ -75,10 +75,41 @@
   <button
     onclick={togglePause}
     disabled={pauseLoading}
-    class="font-display text-sm tracking-wide px-5 py-3 rounded-sm w-full transition-colors disabled:opacity-50 {paused
+    class="font-display text-sm tracking-wide px-5 py-3 rounded-sm w-full transition-colors disabled:opacity-50 flex items-center justify-center gap-2.5 {paused
       ? 'bg-ink/10 text-ink hover:bg-ink/20'
       : 'bg-stamp text-paper hover:bg-stamp-dark'}"
   >
+    {#if paused}
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="w-4 h-4 shrink-0"
+        aria-hidden="true"
+      >
+        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+        <path d="M3 3v5h5" />
+      </svg>
+    {:else}
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        class="w-4 h-4 shrink-0"
+        aria-hidden="true"
+      >
+        <circle cx="12" cy="12" r="10" />
+        <path d="m4.9 4.9 14.2 14.2" />
+      </svg>
+    {/if}
     {pauseLoading ? 'Working…' : paused ? 'Reopen ordering for today' : 'Close ordering for today'}
   </button>
   {#if paused}

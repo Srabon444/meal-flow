@@ -28,7 +28,7 @@
   }
 </script>
 
-<header class="border-b border-line bg-paper">
+<header class="border-b border-line bg-paper" style="padding-top: env(safe-area-inset-top);">
   <div class="max-w-4xl mx-auto px-6 flex items-center justify-between h-16">
     <span class="font-display font-bold text-sm tracking-wide">OFFICEMEAL</span>
 

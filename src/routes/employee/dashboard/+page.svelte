@@ -116,9 +116,24 @@
         <button
           onclick={markEating}
           disabled={marking}
-          class="font-display text-sm tracking-wide bg-stamp text-paper px-5 py-2.5 rounded-sm hover:bg-stamp-dark transition-colors disabled:opacity-50 w-full"
+          class="font-display text-sm tracking-wide bg-stamp text-paper px-5 py-3 rounded-sm hover:bg-stamp-dark transition-colors disabled:opacity-50 w-full flex items-center justify-center gap-2.5"
         >
-          {marking ? 'Marking…' : `Yes, count me in (${activeRate.toFixed(2)}) →`}
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="w-4 h-4 shrink-0"
+            aria-hidden="true"
+          >
+            <path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2" />
+            <path d="M7 2v20" />
+            <path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7" />
+          </svg>
+          {marking ? 'Marking…' : `Yes, count me in (${activeRate.toFixed(2)})`}
         </button>
       {/if}
     </div>
