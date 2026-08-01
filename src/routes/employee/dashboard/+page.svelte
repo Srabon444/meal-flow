@@ -18,19 +18,24 @@
   let marking = $state(false);
   let error = $state('');
   let loadError = $state('');
+  let paused = $state(false);
   let donutCanvas: HTMLCanvasElement | undefined;
   let donutChart: Chart | null = null;
 
   async function load() {
     loading = true;
     loadError = '';
-    const [ratesRes, entriesRes, paymentsRes] = await Promise.all([
+    // Read the date fresh each load — a tab left open past midnight must not
+    // keep reporting yesterday as "today".
+    const today = localToday();
+    const [ratesRes, entriesRes, paymentsRes, pauseRes] = await Promise.all([
       supabase.from('meal_rates').select('rate, effective_from, created_at'),
       supabase.from('meal_entries').select('id, entry_date, status, rate_applied').eq('user_id', userId),
-      supabase.from('payments').select('amount').eq('user_id', userId)
+      supabase.from('payments').select('amount').eq('user_id', userId),
+      supabase.from('ordering_pause').select('paused_date').eq('paused_date', today).maybeSingle()
     ]);
 
-    const failed = [ratesRes.error, entriesRes.error, paymentsRes.error].find(Boolean);
+    const failed = [ratesRes.error, entriesRes.error, paymentsRes.error, pauseRes.error].find(Boolean);
     if (failed) {
       loadError = failed.message;
       loading = false;
@@ -39,12 +44,10 @@
       return;
     }
 
-    // Read the date fresh each load — a tab left open past midnight must not
-    // keep reporting yesterday as "today".
-    const today = localToday();
     activeRate = pickActiveRate(ratesRes.data ?? [], today);
     todayEntry = (entriesRes.data ?? []).find((e) => e.entry_date === today) ?? null;
     balance = computeBalance(entriesRes.data ?? [], paymentsRes.data ?? []);
+    paused = !!pauseRes.data;
     loading = false;
     await tick();
     donutChart?.destroy();
@@ -101,6 +104,9 @@
         <!-- unique(user_id, entry_date) means a cancelled day can't be re-marked. -->
         <p class="font-display text-[11px] tracking-widest text-ink/50 uppercase mb-2">Cancelled</p>
         <p class="text-sm text-ink/60">Today's entry was cancelled.</p>
+      {:else if paused}
+        <p class="font-display text-[11px] tracking-widest text-stamp uppercase mb-2">Closed</p>
+        <p class="text-sm text-ink/60">Ordering is closed for today. Check back tomorrow.</p>
       {:else if activeRate === null}
         <p class="font-display text-[11px] tracking-widest text-stamp uppercase mb-2">No rate set</p>
         <p class="text-sm text-ink/60">Ask your admin to set a meal rate first.</p>
