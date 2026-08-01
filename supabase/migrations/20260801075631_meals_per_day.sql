@@ -16,11 +16,18 @@ begin
     raise exception 'forbidden';
   end if;
 
+  -- The order by is load-bearing, not cosmetic. entry_date is client-supplied
+  -- (the invariants trigger deliberately does not check it against the server
+  -- clock), so an employee could insert 1000+ far-future-dated entries and push
+  -- the real days past max_rows again. Ascending from `since` puts every day the
+  -- caller actually charts in the first rows, so a cap could only ever drop
+  -- future dates the caller discards anyway.
   return query
   select me.entry_date, count(*)::bigint
   from meal_entries me
   where me.status = 'CONFIRMED' and me.entry_date >= since
-  group by me.entry_date;
+  group by me.entry_date
+  order by me.entry_date;
 end;
 $$;
 
