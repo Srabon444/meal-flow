@@ -1,6 +1,7 @@
 <script lang="ts">
   import { supabase } from '$lib/supabase';
-  import { onMount, onDestroy } from 'svelte';
+  import { FunctionsHttpError } from '@supabase/supabase-js';
+  import { onMount, onDestroy, tick } from 'svelte';
   import {
     Chart,
     BarController,
@@ -15,13 +16,30 @@
 
   type BalanceRow = { user_id: string; total_eaten: number; total_cost: number; total_paid: number };
 
-  let mealsCanvas: HTMLCanvasElement;
-  let duesCanvas: HTMLCanvasElement;
+  // $state so `bind:this` clearing them on unmount is visible to load()'s guards.
+  let mealsCanvas = $state<HTMLCanvasElement | undefined>();
+  let duesCanvas = $state<HTMLCanvasElement | undefined>();
   let mealsChart: Chart | null = null;
   let duesChart: Chart | null = null;
 
   let loading = $state(true);
   let loadError = $state('');
+  let dueRows = $state<{ name: string; due: number }[]>([]);
+
+  function destroyCharts() {
+    mealsChart?.destroy();
+    mealsChart = null;
+    duesChart?.destroy();
+    duesChart = null;
+  }
+
+  async function messageFor(err: Error): Promise<string> {
+    if (err instanceof FunctionsHttpError) {
+      const body = await err.context.json().catch(() => null);
+      if (body?.error) return body.error;
+    }
+    return err.message;
+  }
 
   function lastNDays(n: number): string[] {
     const days: string[] = [];
@@ -41,38 +59,48 @@
     const days = lastNDays(30);
     const since = days[0];
 
-    const [entriesRes, balancesRes] = await Promise.all([
-      supabase
-        .from('meal_entries')
-        .select('entry_date')
-        .eq('status', 'CONFIRMED')
-        .gte('entry_date', since),
-      supabase.rpc('employee_balances')
+    // Counted in Postgres, not here: selecting one row per meal entry silently
+    // truncated at PostgREST's max_rows (1000) and undercounted arbitrary days.
+    const [entriesRes, balancesRes, employeesRes] = await Promise.all([
+      supabase.rpc('meals_per_day', { since }),
+      supabase.rpc('employee_balances'),
+      supabase.functions.invoke<{ employees: { id: string; name: string }[] }>(
+        'admin-list-employees',
+        { method: 'GET' }
+      )
     ]);
 
     if (entriesRes.error) {
       loadError = entriesRes.error.message;
       loading = false;
+      destroyCharts();
       return;
     }
     if (balancesRes.error) {
       loadError = balancesRes.error.message;
       loading = false;
+      destroyCharts();
+      return;
+    }
+    if (employeesRes.error) {
+      loadError = await messageFor(employeesRes.error);
+      loading = false;
+      destroyCharts();
       return;
     }
 
+    // One row per day (at most 30), so no cap can bite.
     const countByDay: Record<string, number> = Object.fromEntries(days.map((d) => [d, 0]));
     for (const row of entriesRes.data ?? []) {
-      if (row.entry_date in countByDay) countByDay[row.entry_date]++;
+      if (row.entry_date in countByDay) countByDay[row.entry_date] = Number(row.meal_count);
     }
 
-    const { data: employeesData } = await supabase.functions.invoke<{
-      employees: { id: string; name: string }[];
-    }>('admin-list-employees', { method: 'GET' });
-    const nameById = Object.fromEntries((employeesData?.employees ?? []).map((e) => [e.id, e.name]));
+    const nameById = Object.fromEntries(
+      (employeesRes.data?.employees ?? []).map((e) => [e.id, e.name])
+    );
 
     const balanceRows = (balancesRes.data ?? []) as unknown as BalanceRow[];
-    const dueRows = balanceRows
+    dueRows = balanceRows
       .map((r) => ({
         name: nameById[r.user_id] ?? 'Unknown',
         due: Number(r.total_cost) - Number(r.total_paid)
@@ -80,34 +108,38 @@
       .filter((r) => r.due > 0)
       .sort((a, b) => b.due - a.due);
 
-    mealsChart?.destroy();
-    mealsChart = new Chart(mealsCanvas, {
-      type: 'bar',
-      data: {
-        labels: days,
-        datasets: [{ label: 'Meals', data: days.map((d) => countByDay[d]), backgroundColor: '#2b2622' }]
-      },
-      options: { responsive: true, plugins: { legend: { display: false } } }
-    });
-
-    duesChart?.destroy();
-    duesChart = new Chart(duesCanvas, {
-      type: 'bar',
-      data: {
-        labels: dueRows.map((r) => r.name),
-        datasets: [{ label: 'Due', data: dueRows.map((r) => r.due), backgroundColor: '#c4432b' }]
-      },
-      options: { responsive: true, plugins: { legend: { display: false } } }
-    });
-
     loading = false;
+    // The dues canvas only exists when dueRows is non-empty — let it render first.
+    await tick();
+    destroyCharts();
+    // Canvases are undefined if the component unmounted mid-load.
+    if (mealsCanvas) {
+      mealsChart = new Chart(mealsCanvas, {
+        type: 'bar',
+        data: {
+          labels: days,
+          datasets: [
+            { label: 'Meals', data: days.map((d) => countByDay[d]), backgroundColor: '#2b2622' }
+          ]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+    }
+
+    if (duesCanvas) {
+      duesChart = new Chart(duesCanvas, {
+        type: 'bar',
+        data: {
+          labels: dueRows.map((r) => r.name),
+          datasets: [{ label: 'Due', data: dueRows.map((r) => r.due), backgroundColor: '#c4432b' }]
+        },
+        options: { responsive: true, plugins: { legend: { display: false } } }
+      });
+    }
   }
 
   onMount(load);
-  onDestroy(() => {
-    mealsChart?.destroy();
-    duesChart?.destroy();
-  });
+  onDestroy(destroyCharts);
 </script>
 
 <div class="mb-8">
@@ -130,7 +162,10 @@
     <p class="font-display text-[11px] tracking-widest text-ink/50 uppercase mb-3">Outstanding dues</p>
     {#if loading}
       <p class="text-sm text-ink/50">Loading…</p>
+    {:else if dueRows.length === 0}
+      <p class="text-sm text-ink/50">Nobody owes anything.</p>
+    {:else}
+      <canvas bind:this={duesCanvas} height="120"></canvas>
     {/if}
-    <canvas bind:this={duesCanvas} height="120"></canvas>
   </div>
 </div>
