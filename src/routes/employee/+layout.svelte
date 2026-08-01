@@ -1,8 +1,9 @@
 <script lang="ts">
   import NavRail from '$lib/components/NavRail.svelte';
   import { page } from '$app/state';
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { initWebPush } from '$lib/push';
+  import { initAndroidReminders } from '$lib/androidReminders';
 
   let { children } = $props();
 
@@ -12,10 +13,16 @@
     { href: '/employee/settings', label: 'Settings' }
   ];
 
+  let stopAndroidReminders: () => void = () => {};
+
   onMount(() => {
     const userId = page.data.profile?.id;
-    if (userId) void initWebPush(userId);
+    if (userId) {
+      void initWebPush(userId);
+      stopAndroidReminders = initAndroidReminders(userId, 'employee');
+    }
   });
+  onDestroy(() => stopAndroidReminders());
 </script>
 
 <div class="min-h-screen">
