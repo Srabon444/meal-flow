@@ -2,7 +2,10 @@
   import { page } from '$app/state';
   import { supabase } from '$lib/supabase';
   import { pickActiveRate, computeBalance, localToday } from '$lib/meals';
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy, tick } from 'svelte';
+  import { Chart, DoughnutController, ArcElement, Tooltip, Legend } from 'chart.js';
+
+  Chart.register(DoughnutController, ArcElement, Tooltip, Legend);
 
   const userId = page.data.profile?.id as string;
 
@@ -15,6 +18,8 @@
   let marking = $state(false);
   let error = $state('');
   let loadError = $state('');
+  let donutCanvas: HTMLCanvasElement | undefined;
+  let donutChart: Chart | null = null;
 
   async function load() {
     loading = true;
@@ -39,9 +44,23 @@
     todayEntry = (entriesRes.data ?? []).find((e) => e.entry_date === today) ?? null;
     balance = computeBalance(entriesRes.data ?? [], paymentsRes.data ?? []);
     loading = false;
+    await tick();
+    donutChart?.destroy();
+    donutChart = null;
+    if (balance.due > 0 && donutCanvas) {
+      donutChart = new Chart(donutCanvas, {
+        type: 'doughnut',
+        data: {
+          labels: ['Paid', 'Due'],
+          datasets: [{ data: [balance.totalPaid, balance.due], backgroundColor: ['#5b7553', '#c4432b'] }]
+        },
+        options: { responsive: true }
+      });
+    }
   }
 
   onMount(load);
+  onDestroy(() => donutChart?.destroy());
 
   async function markEating() {
     if (marking) return;
@@ -116,6 +135,15 @@
           <dd class="font-display text-lg {balance.due > 0 ? 'text-stamp' : 'text-sage'}">{balance.due.toFixed(2)}</dd>
         </div>
       </dl>
+      {#if balance.due > 0}
+        <div class="mt-6 max-w-xs">
+          <canvas bind:this={donutCanvas} height="160"></canvas>
+        </div>
+      {:else}
+        <p class="mt-6 text-sm text-sage">
+          {balance.due < 0 ? `Credit of ${(-balance.due).toFixed(2)}` : 'Paid in full'}
+        </p>
+      {/if}
     </div>
   </div>
 {/if}
