@@ -92,14 +92,12 @@
   <button
     onclick={togglePause}
     disabled={pauseLoading}
-    class="flex flex-col items-center gap-3 mx-auto disabled:opacity-50"
+    class="flex flex-col items-center gap-2 mx-auto disabled:opacity-50 hover:brightness-105 transition-[filter]"
   >
-    <span
-      class="w-16 h-16 rounded-full transition-colors flex items-center justify-center shrink-0 {paused
-        ? 'bg-ink/10 text-ink hover:bg-ink/20'
-        : 'bg-stamp text-paper shadow-sm shadow-stamp/40 hover:bg-stamp-dark'}"
-    >
-      {#if paused}
+    {#if paused}
+      <span
+        class="w-16 h-16 rounded-full bg-ink/10 text-ink hover:bg-ink/20 transition-colors flex items-center justify-center shrink-0"
+      >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           viewBox="0 0 24 24"
@@ -114,29 +112,16 @@
           <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
           <path d="M3 3v5h5" />
         </svg>
-      {:else}
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          stroke-width="2"
-          stroke-linecap="round"
-          stroke-linejoin="round"
-          class="w-7 h-7"
-          aria-hidden="true"
-        >
-          <circle cx="12" cy="12" r="10" />
-          <path d="M8 5v4M9.5 5v4M11 5v4" />
-          <path d="M9.5 9v10" />
-          <path d="M16 5 14 8 16 9" />
-          <path d="M15.5 5v14" />
-        </svg>
+      </span>
+      <span class="font-display text-sm tracking-wide">
+        {pauseLoading ? 'Working…' : 'Reopen ordering for today'}
+      </span>
+    {:else}
+      <img src="/close-order-button.png" alt="Close ordering for today" class="w-full max-w-70" />
+      {#if pauseLoading}
+        <span class="font-display text-xs tracking-wide text-ink/50">Working…</span>
       {/if}
-    </span>
-    <span class="font-display text-sm tracking-wide">
-      {pauseLoading ? 'Working…' : paused ? 'Reopen ordering for today' : 'Close ordering for today'}
-    </span>
+    {/if}
   </button>
   {#if paused}
     <p class="mt-2 text-xs text-ink/50">
