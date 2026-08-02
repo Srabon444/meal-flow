@@ -2,7 +2,7 @@
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "meal-flow",
   "version": "0.1.2",
-  "identifier": "com.officemeal.app",
+  "identifier": "com.mealflow.app",
   "build": {
     "frontendDist": "../build",
     "devUrl": "http://localhost:5173",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "OfficeMeal",
+        "title": "MealFlow",
         "width": 800,
         "height": 600,
         "resizable": true,

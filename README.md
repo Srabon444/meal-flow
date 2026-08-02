@@ -1,4 +1,4 @@
-# OfficeMeal
+# MealFlow
 
 Office meal ordering, tally, dues, and cancel-approval workflow. Web (Vercel), desktop
 (Linux/Windows via Tauri), and Android — one SvelteKit static build feeds all three.
@@ -118,19 +118,19 @@ way again (Android/Play would treat it as a different app).
 1. **Generate a keystore, on your own machine** (needs a JDK — Android Studio includes
    one):
    ```bash
-   keytool -genkeypair -v -keystore officemeal-release.jks -keyalg RSA -keysize 2048 \
-     -validity 10000 -alias officemeal
+   keytool -genkeypair -v -keystore mealflow-release.jks -keyalg RSA -keysize 2048 \
+     -validity 10000 -alias mealflow
    ```
    Set a real password when prompted and remember it. **Back up the `.jks` file
    somewhere safe outside this repo** — it's never committed, and there's no recovery
    if it's lost.
 2. **Base64-encode it:**
-   - Mac/Linux: `base64 -i officemeal-release.jks | tr -d '\n'`
-   - Windows (PowerShell): `[Convert]::ToBase64String([IO.File]::ReadAllBytes("officemeal-release.jks"))`
+   - Mac/Linux: `base64 -i mealflow-release.jks | tr -d '\n'`
+   - Windows (PowerShell): `[Convert]::ToBase64String([IO.File]::ReadAllBytes("mealflow-release.jks"))`
 3. **Add 3 repo secrets** (Settings → Secrets and variables → Actions → **Secrets**
    tab):
    - `ANDROID_KEYSTORE_BASE64` — the base64 output from step 2
-   - `ANDROID_KEY_ALIAS` — `officemeal` (or whatever alias you used)
+   - `ANDROID_KEY_ALIAS` — `mealflow` (or whatever alias you used)
    - `ANDROID_KEY_PASSWORD` — the password from step 1
 4. **Add 1 repo variable** (same page, **Variables** tab, not Secrets):
    `ANDROID_SIGNING_ENABLED` = `true`. CI checks this before attempting to sign, so a
