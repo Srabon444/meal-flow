@@ -24,8 +24,8 @@
 <div class="min-h-screen flex items-center justify-center px-4">
   <div class="w-full max-w-sm">
     <div class="mb-8 text-center">
+      <img src="/logo-mark.png" alt="MealFlow" class="h-16 w-16 rounded-2xl mx-auto mb-3" />
       <p class="font-display text-xs tracking-[0.3em] text-stamp uppercase mb-2">Staff sign-in</p>
-      <h1 class="font-display text-2xl font-bold tracking-tight">OfficeMeal</h1>
     </div>
 
     <form onsubmit={handleLogin} class="ticket pt-8 pb-6 px-6">

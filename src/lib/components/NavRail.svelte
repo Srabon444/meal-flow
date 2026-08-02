@@ -30,7 +30,7 @@
 
 <header class="border-b border-line bg-paper" style="padding-top: env(safe-area-inset-top);">
   <div class="max-w-4xl mx-auto px-6 flex items-center justify-between h-16">
-    <span class="font-display font-bold text-sm tracking-wide">OFFICEMEAL</span>
+    <img src="/logo-mark.png" alt="MealFlow" class="h-9 w-9 rounded-lg" />
 
     <nav class="hidden md:flex items-center gap-1">
       {#each links as link (link.href)}
