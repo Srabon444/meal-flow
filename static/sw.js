@@ -1,7 +1,7 @@
 self.addEventListener('push', (event) => {
   const data = event.data ? event.data.json() : {};
-  const title = data.title ?? 'OfficeMeal';
-  const options = { body: data.body ?? '', icon: '/favicon.svg' };
+  const title = data.title ?? 'MealFlow';
+  const options = { body: data.body ?? '', icon: '/android-chrome-192x192.png' };
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
