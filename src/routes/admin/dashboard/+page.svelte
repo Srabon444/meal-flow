@@ -151,28 +151,12 @@
   <button
     onclick={notifyToOrder}
     disabled={notifyLoading}
-    class="flex flex-col items-center gap-3 mx-auto disabled:opacity-50"
+    class="flex flex-col items-center gap-2 mx-auto disabled:opacity-50 hover:brightness-105 transition-[filter]"
   >
-    <span
-      class="w-16 h-16 rounded-full bg-ink/10 text-ink hover:bg-ink/20 transition-colors flex items-center justify-center shrink-0"
-    >
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        class="w-7 h-7"
-        aria-hidden="true"
-      >
-        <path d="M4 9v6h3l7 4V5l-7 4H4" />
-      </svg>
-    </span>
-    <span class="font-display text-sm tracking-wide">
-      {notifyLoading ? 'Sending…' : 'Notify employees to order'}
-    </span>
+    <img src="/notify-button.png" alt="Notify employees to order" class="w-full max-w-70" />
+    {#if notifyLoading}
+      <span class="font-display text-xs tracking-wide text-ink/50">Sending…</span>
+    {/if}
   </button>
   {#if notifySent}
     <p class="mt-2 text-xs text-ink/50">Sent. Android needs the app open to receive it.</p>

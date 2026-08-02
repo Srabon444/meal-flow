@@ -116,31 +116,11 @@
         <button
           onclick={markEating}
           disabled={marking}
-          class="flex flex-col items-center gap-3 mx-auto disabled:opacity-50"
+          class="flex flex-col items-center gap-2 mx-auto disabled:opacity-50 hover:brightness-105 transition-[filter]"
         >
-          <span
-            class="w-16 h-16 rounded-full bg-stamp text-paper shadow-sm shadow-stamp/40 hover:bg-stamp-dark transition-colors flex items-center justify-center shrink-0"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              class="w-7 h-7"
-              aria-hidden="true"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <path d="M8 5v4M9.5 5v4M11 5v4" />
-              <path d="M9.5 9v10" />
-              <path d="M16 5 14 8 16 9" />
-              <path d="M15.5 5v14" />
-            </svg>
-          </span>
-          <span class="font-display text-sm tracking-wide">
-            {marking ? 'Marking…' : `Yes, count me in (${activeRate.toFixed(2)})`}
+          <img src="/order-button.png" alt="Order now" class="w-full max-w-70" />
+          <span class="font-display text-xs tracking-wide text-ink/50">
+            {marking ? 'Marking…' : `Charged at ${activeRate.toFixed(2)}`}
           </span>
         </button>
       {/if}
