@@ -5,6 +5,16 @@ Office meal ordering, tally, dues, and cancel-approval workflow. Web (Vercel), d
 See `office-meal-app-prompt.md` for the full source spec and `docs/superpowers/specs/`
 for sub-project designs.
 
+## Screenshots
+
+| Dashboard | Rate |
+|---|---|
+| ![Dashboard](docs/images/mealflow-1.png) | ![Rate](docs/images/mealflow-2.png) |
+
+| Employees | Reports |
+|---|---|
+| ![Employees](docs/images/mealflow-3.png) | ![Reports](docs/images/mealflow-4.png) |
+
 ## Setup (local development)
 
 1. `npm install`
