@@ -105,8 +105,8 @@
         <p class="font-display text-[11px] tracking-widest text-ink/50 uppercase mb-2">Cancelled</p>
         <p class="text-sm text-ink/60">Today's entry was cancelled.</p>
       {:else if paused}
-        <p class="font-display text-[11px] tracking-widest text-stamp uppercase mb-2">Closed</p>
-        <p class="text-sm text-ink/60">Ordering is closed for today. Check back tomorrow.</p>
+        <img src="/order-closed-button.png" alt="Ordering closed for today" class="w-full max-w-70 mx-auto" />
+        <p class="text-sm text-ink/60 text-center mt-2">Check back tomorrow.</p>
       {:else if activeRate === null}
         <p class="font-display text-[11px] tracking-widest text-stamp uppercase mb-2">No rate set</p>
         <p class="text-sm text-ink/60">Ask your admin to set a meal rate first.</p>

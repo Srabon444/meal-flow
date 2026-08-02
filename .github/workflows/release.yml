@@ -155,6 +155,16 @@ jobs:
       - name: Init Android project
         run: npx tauri android init
 
+      # `tauri icon` only writes into gen/android/app/src/main/res when that
+      # directory already exists at the time it runs - otherwise it silently
+      # falls back to writing src-tauri/icons/android instead, which nothing
+      # in the Android build ever reads. gen/android is recreated from
+      # scratch above, so the launcher icon must be (re)synced every run,
+      # after init and before the build, or the app ships Tauri's default
+      # placeholder icon.
+      - name: Sync app icon into Android project
+        run: npx tauri icon static/logo-mark.png
+
       - name: Bundle custom notification sound
         run: node .github/scripts/patch-android-sound.mjs
 
