@@ -15,6 +15,9 @@
   let paused = $state(false);
   let pauseLoading = $state(false);
   let pauseError = $state('');
+  let notifyLoading = $state(false);
+  let notifyError = $state('');
+  let notifySent = $state(false);
 
   async function load() {
     loading = true;
@@ -58,6 +61,20 @@
     paused = !paused;
   }
 
+  async function notifyToOrder() {
+    if (notifyLoading) return;
+    notifyLoading = true;
+    notifyError = '';
+    notifySent = false;
+    const { error } = await supabase.functions.invoke('notify-order');
+    notifyLoading = false;
+    if (error) {
+      notifyError = error.message;
+      return;
+    }
+    notifySent = true;
+  }
+
   onMount(() => {
     load();
     loadPauseState();
@@ -75,9 +92,9 @@
   <button
     onclick={togglePause}
     disabled={pauseLoading}
-    class="font-display text-sm tracking-wide px-5 py-3 rounded-sm w-full transition-colors disabled:opacity-50 flex items-center justify-center gap-2.5 {paused
+    class="font-display text-sm tracking-wide px-5 py-3 rounded-full w-full transition-colors disabled:opacity-50 flex items-center justify-center gap-2.5 {paused
       ? 'bg-ink/10 text-ink hover:bg-ink/20'
-      : 'bg-stamp text-paper hover:bg-stamp-dark'}"
+      : 'bg-stamp text-paper shadow-sm shadow-stamp/40 hover:bg-stamp-dark'}"
   >
     {#if paused}
       <svg
@@ -107,7 +124,10 @@
         aria-hidden="true"
       >
         <circle cx="12" cy="12" r="10" />
-        <path d="m4.9 4.9 14.2 14.2" />
+        <path d="M8 5v4M9.5 5v4M11 5v4" />
+        <path d="M9.5 9v10" />
+        <path d="M16 5 14 8 16 9" />
+        <path d="M15.5 5v14" />
       </svg>
     {/if}
     {pauseLoading ? 'Working…' : paused ? 'Reopen ordering for today' : 'Close ordering for today'}
@@ -116,6 +136,21 @@
     <p class="mt-2 text-xs text-ink/50">
       Employees can't mark new meals today. Reopens automatically tomorrow.
     </p>
+  {/if}
+</div>
+
+<div class="ticket mb-8 px-6 py-5">
+  <p class="font-display text-[11px] tracking-widest text-ink/50 uppercase mb-2">Reminder</p>
+  {#if notifyError}<p class="text-sm text-stamp-dark mb-2">{notifyError}</p>{/if}
+  <button
+    onclick={notifyToOrder}
+    disabled={notifyLoading}
+    class="font-display text-sm tracking-wide px-5 py-3 rounded-full w-full transition-colors disabled:opacity-50 bg-ink/10 text-ink hover:bg-ink/20"
+  >
+    {notifyLoading ? 'Sending…' : 'Notify employees to order'}
+  </button>
+  {#if notifySent}
+    <p class="mt-2 text-xs text-ink/50">Sent. Android needs the app open to receive it.</p>
   {/if}
 </div>
 

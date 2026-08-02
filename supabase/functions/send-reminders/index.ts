@@ -1,5 +1,5 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
-import webpush from 'npm:web-push@3';
+import { configureVapid, sendToUsers } from '../_shared/webpush.ts';
 
 // Cron-only endpoint: Supabase's scheduled Cron Jobs hit this twice a day
 // (see README "Push reminders" setup). Never exposed to end users, so auth
@@ -23,11 +23,7 @@ Deno.serve(async (req) => {
     );
   }
 
-  webpush.setVapidDetails(
-    Deno.env.get('VAPID_SUBJECT') ?? 'mailto:admin@example.com',
-    Deno.env.get('VAPID_PUBLIC_KEY')!,
-    Deno.env.get('VAPID_PRIVATE_KEY')!
-  );
+  configureVapid();
 
   const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Dhaka' });
   let targetUserIds: string[] = [];
@@ -69,48 +65,15 @@ Deno.serve(async (req) => {
     targetUserIds = (admins ?? []).map((a) => a.id);
   }
 
-  if (targetUserIds.length === 0) {
-    return new Response(JSON.stringify({ sent: 0 }), { status: 200 });
-  }
-
-  const { data: subscriptions, error: subsError } = await client
-    .from('push_subscriptions')
-    .select('id, user_id, endpoint, p256dh, auth')
-    .in('user_id', targetUserIds);
-  if (subsError) {
-    return new Response(JSON.stringify({ error: subsError.message }), { status: 500 });
-  }
-
-  const payload = JSON.stringify(
+  const payload =
     kind === 'employee-reminder'
-      ? { title: 'OfficeMeal', body: "You haven't ordered today yet." }
-      : { title: 'OfficeMeal', body: 'Ordering is still open — close it if needed.' }
-  );
+      ? { title: 'MealFlow', body: "You haven't ordered today yet." }
+      : { title: 'MealFlow', body: 'Ordering is still open — close it if needed.' };
 
-  let sent = 0;
-  const staleIds: string[] = [];
-  let failed = 0;
-  for (const sub of subscriptions ?? []) {
-    try {
-      await webpush.sendNotification(
-        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
-        payload
-      );
-      sent++;
-    } catch (err) {
-      const statusCode = (err as { statusCode?: number }).statusCode;
-      if (statusCode === 404 || statusCode === 410) {
-        staleIds.push(sub.id);
-      } else {
-        failed++;
-        console.error('push send failed', sub.id, err);
-      }
-    }
+  try {
+    const result = await sendToUsers(client, targetUserIds, payload);
+    return new Response(JSON.stringify(result), { status: 200 });
+  } catch (err) {
+    return new Response(JSON.stringify({ error: (err as Error).message }), { status: 500 });
   }
-
-  if (staleIds.length > 0) {
-    await client.from('push_subscriptions').delete().in('id', staleIds);
-  }
-
-  return new Response(JSON.stringify({ sent, stale: staleIds.length, failed }), { status: 200 });
 });

@@ -1,6 +1,30 @@
-import { isPermissionGranted, requestPermission, sendNotification } from '@tauri-apps/plugin-notification';
+import {
+  isPermissionGranted,
+  requestPermission,
+  sendNotification,
+  createChannel,
+  Importance
+} from '@tauri-apps/plugin-notification';
 import { supabase } from './supabase';
 import { localToday } from './meals';
+
+const ORDER_BROADCAST_CHANNEL_ID = 'order-broadcast';
+let orderChannelReady = false;
+
+// Sound resource is bundled from static/sounds/order-notification.wav into
+// gen/android/app/src/main/res/raw/order_notify.wav at build time - see
+// .github/scripts/patch-android-sound.mjs. Android resource names must be
+// lowercase with no extension when referenced from code.
+async function ensureOrderBroadcastChannel(): Promise<void> {
+  if (orderChannelReady) return;
+  await createChannel({
+    id: ORDER_BROADCAST_CHANNEL_ID,
+    name: 'Order reminders',
+    importance: Importance.High,
+    sound: 'order_notify'
+  });
+  orderChannelReady = true;
+}
 
 function isTauriAndroid(): boolean {
   return '__TAURI_INTERNALS__' in window && /Android/i.test(navigator.userAgent);
@@ -41,8 +65,8 @@ async function checkEmployeeReminder(userId: string): Promise<void> {
     .maybeSingle();
   if (!data) {
     await notifyOnce(
-      `officemeal-employee-reminder-${userId}`,
-      'OfficeMeal',
+      `mealflow-employee-reminder-${userId}`,
+      'MealFlow',
       "You haven't ordered today yet."
     );
   }
@@ -59,16 +83,45 @@ async function checkAdminReminder(userId: string): Promise<void> {
     .maybeSingle();
   if (!data) {
     await notifyOnce(
-      `officemeal-admin-reminder-${userId}`,
-      'OfficeMeal',
+      `mealflow-admin-reminder-${userId}`,
+      'MealFlow',
       'Ordering is still open — close it if needed.'
     );
   }
 }
 
-/** Starts the Android-only foreground reminder loop. No-ops outside the Tauri
- *  Android build — web/desktop get real push instead (see push.ts). Returns
- *  a cleanup function for onDestroy. */
+// Android has no background push (no FCM), so the admin's on-demand "notify
+// to order" broadcast (see notify-order edge function) only reaches an
+// Android app that's open — via this Realtime subscription on the row it
+// inserts, same constraint as the scheduled reminders above.
+function initOrderBroadcastListener(): () => void {
+  void ensureOrderBroadcastChannel();
+  const channel = supabase
+    .channel('order-broadcast-listener')
+    .on(
+      'postgres_changes',
+      { event: 'INSERT', schema: 'public', table: 'order_broadcasts' },
+      () => {
+        void (async () => {
+          let granted = await isPermissionGranted();
+          if (!granted) granted = (await requestPermission()) === 'granted';
+          if (!granted) return;
+          sendNotification({
+            channelId: ORDER_BROADCAST_CHANNEL_ID,
+            title: 'MealFlow',
+            body: 'Time to order your meal!'
+          });
+        })();
+      }
+    )
+    .subscribe();
+  return () => void supabase.removeChannel(channel);
+}
+
+/** Starts the Android-only foreground reminder loop (and, for employees, the
+ *  on-demand order-broadcast listener). No-ops outside the Tauri Android
+ *  build — web/desktop get real push instead (see push.ts). Returns a
+ *  cleanup function for onDestroy. */
 export function initAndroidReminders(userId: string, role: 'employee' | 'admin'): () => void {
   if (!isTauriAndroid()) return () => {};
   const check = () => {
@@ -77,5 +130,9 @@ export function initAndroidReminders(userId: string, role: 'employee' | 'admin')
   };
   check();
   const interval = setInterval(check, 15 * 60 * 1000);
-  return () => clearInterval(interval);
+  const stopBroadcastListener = role === 'employee' ? initOrderBroadcastListener() : () => {};
+  return () => {
+    clearInterval(interval);
+    stopBroadcastListener();
+  };
 }
