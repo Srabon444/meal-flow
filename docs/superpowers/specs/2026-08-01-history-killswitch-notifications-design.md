@@ -5,12 +5,12 @@
 Three features, one branch:
 1. Employees can see their own dated history (meals eaten, payments) — mirrors the admin roster's per-employee history view.
 2. Admin gets a one-tap kill-switch to stop new meal orders for the rest of the current day; it auto-reopens the next day with no cron/cleanup.
-3. Reminders: employees who haven't ordered by 9am (Asia/Dhaka) get a push notification; admin gets a push at 10:30am if ordering hasn't been closed yet. Real push for web + desktop. Android gets an in-app/foreground-only local notification (no FCM — see Constraints).
+3. Reminders: employees who haven't ordered by 9am (Asia/Dhaka) get a push notification; admin gets a push at 10:30am if ordering hasn't been closed yet. Real push for web + desktop. Android originally got only a foreground-only local notification (no FCM — see Constraints below); real background push via FCM was added afterward (`tauri-plugin-mobile-push`, `fcm_tokens`, `_shared/fcm.ts`), see README's "Android push (FCM) setup". The foreground-only fallback below is kept as a safety net alongside FCM.
 
 ## Constraints
 
 - Fixed timezone for all reminder scheduling: `Asia/Dhaka` (UTC+6).
-- Android does not get true background push. Tauri has no official FCM plugin; building one is out of scope. Android shows the same reminder as a local notification (`@tauri-apps/plugin-notification`) only while the app is open/foregrounded.
+- ~~Android does not get true background push. Tauri has no official FCM plugin; building one is out of scope. Android shows the same reminder as a local notification (`@tauri-apps/plugin-notification`) only while the app is open/foregrounded.~~ Superseded: Android now gets real background push via FCM (`tauri-plugin-mobile-push`), see README's "Android push (FCM) setup". The local-notification fallback below is kept as a foreground safety net.
 - Admin recipients for the 10:30 reminder = every `profiles.role = 'admin'` row with a push subscription. No per-admin scoping.
 - Backend is the real enforcement boundary for the kill-switch (trigger), per this project's standing rule that frontend checks are UX only.
 
@@ -130,5 +130,5 @@ create policy push_subscriptions_own on public.push_subscriptions
 ## Out of scope
 
 - iOS (needs a Mac, already noted as out of scope earlier in this project).
-- Android true background push (FCM) — explicitly deferred per Constraints.
+- ~~Android true background push (FCM) — explicitly deferred per Constraints.~~ Added later, see README's "Android push (FCM) setup".
 - Configurable reminder times / configurable timezone — hardcoded Dhaka, 9:00/10:30, matching what was asked for.

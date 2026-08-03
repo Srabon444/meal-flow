@@ -80,11 +80,10 @@ pre-merge, not as a manual post-merge checklist item — unlike the rest of the
 Release section below, a fresh build depends on this one at compile time.
 
 Employees get a push at 9am (Asia/Dhaka) if they haven't ordered yet; admins get
-one at 10:30am if ordering is still open. Real push for the web app. Desktop
-and Android builds currently show no reminder in the background — Android gets
-an in-app reminder only while the app is open (Tauri has no Firebase Cloud
-Messaging plugin for true background push); desktop's webview generally lacks
-push service support.
+one at 10:30am if ordering is still open. Real push for the web app and for
+Android (via Firebase Cloud Messaging, see below — delivered even if the app
+is fully closed). Desktop's webview generally lacks push service support, so
+desktop builds currently show no background reminder.
 
 1. **Generate a VAPID keypair** (needed once):
    ```bash
@@ -107,6 +106,31 @@ push service support.
      header `x-cron-secret: <the CRON_SECRET value>`, body `{"kind":"employee-reminder"}`
    - Name `admin-reminder`, schedule `30 4 * * *` (10:30 Asia/Dhaka), same URL
      and header, body `{"kind":"admin-reminder"}`
+
+## Android push (FCM) setup
+
+Real background push for Android — delivered even when the app is fully
+closed — via Firebase Cloud Messaging. `tauri-plugin-mobile-push` registers
+the device and stores its token in `fcm_tokens`; the edge functions send FCM
+`notification`-type messages, which Android displays natively with no app
+code needed whenever the app is backgrounded or killed.
+
+1. **Create a Firebase project** at console.firebase.google.com, add an
+   Android app with package id `com.mealflow.app` (must match `identifier` in
+   `src-tauri/tauri.conf.json`).
+2. **Download `google-services.json`** from the Firebase console, base64-encode
+   it, and add it as a GitHub Actions repo secret:
+   - `FCM_GOOGLE_SERVICES_JSON_BASE64` — `base64 -w0 google-services.json`
+3. **Generate a service account key** — Firebase console → Project Settings →
+   Service Accounts → "Generate new private key" — then set it as an edge
+   function secret (`npx supabase secrets set`):
+   - `FCM_SERVICE_ACCOUNT_JSON` — the raw JSON contents, single-quoted
+4. **Deploy the functions** (if not already): `npx supabase functions deploy notify-order`
+   and `npx supabase functions deploy send-reminders`.
+5. **Verify on a real device** — install the built APK, sign in, force-stop the
+   app (Settings → Apps → MealFlow → Force stop, not just backgrounding it),
+   then trigger a reminder or the admin's "time to order" broadcast and confirm
+   a system notification appears.
 
 ## Signing the Android build
 
