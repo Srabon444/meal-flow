@@ -21,7 +21,7 @@
   }
 </script>
 
-<div class="min-h-screen flex items-center justify-center px-4">
+<div class="min-h-dvh flex items-center justify-center px-4 pb-24">
   <div class="w-full max-w-sm">
     <div class="mb-8 text-center">
       <img src="/logo-mark.png" alt="MealFlow" class="h-16 w-16 rounded-2xl mx-auto mb-3" />
