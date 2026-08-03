@@ -8,6 +8,6 @@
   "permissions": [
     "core:default",
     "notification:default",
-    "mobile-push:default"
+    "fcm:default"
   ]
 }

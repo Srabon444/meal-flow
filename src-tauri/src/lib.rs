@@ -2,7 +2,7 @@
 pub fn run() {
   let builder = tauri::Builder::default().plugin(tauri_plugin_notification::init());
   #[cfg(mobile)]
-  let builder = builder.plugin(tauri_plugin_mobile_push::init());
+  let builder = builder.plugin(tauri_plugin_fcm::init());
   builder
     .setup(|app| {
       if cfg!(debug_assertions) {

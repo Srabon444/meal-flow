@@ -110,7 +110,7 @@ desktop builds currently show no background reminder.
 ## Android push (FCM) setup
 
 Real background push for Android — delivered even when the app is fully
-closed — via Firebase Cloud Messaging. `tauri-plugin-mobile-push` registers
+closed — via Firebase Cloud Messaging. `tauri-plugin-fcm` registers
 the device and stores its token in `fcm_tokens`; the edge functions send FCM
 `notification`-type messages, which Android displays natively with no app
 code needed whenever the app is backgrounded or killed.

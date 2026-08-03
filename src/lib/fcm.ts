@@ -6,9 +6,11 @@ function isTauriAndroid(): boolean {
   return '__TAURI_INTERNALS__' in window && /Android/i.test(navigator.userAgent);
 }
 
-// TEMPORARY debug aid: fcm_tokens stayed empty on a real device with no way
-// to see console.error output, so failures get routed into a visible local
-// notification instead. Remove once FCM registration is confirmed working.
+// TEMPORARY debug aid: the first plugin tried here (tauri-plugin-mobile-push)
+// turned out to hardcode granted:false/empty-token on Android with no way to
+// see console.error output on a real device - failures get routed into a
+// visible local notification too. Remove once FCM registration is confirmed
+// solid across a few real installs.
 async function debugNotify(message: string): Promise<void> {
   console.error('[fcm debug]', message);
   try {
@@ -35,47 +37,39 @@ async function upsertToken(userId: string, token: string): Promise<void> {
 }
 
 /** Registers for real Android push (delivered even when the app process is
- *  killed - see plan doc) and stores the FCM token server-side. Also shows a
- *  local notification on receipt while the app is foregrounded, since FCM's
- *  `notification`-type payloads only auto-display in background/killed
- *  state. No-ops outside the Tauri Android build. */
+ *  killed - see plan doc) and stores the FCM token server-side. No-ops
+ *  outside the Tauri Android build. Foreground display of pushes is handled
+ *  by the existing order_broadcasts Realtime fallback (androidReminders.ts),
+ *  since this plugin has no incoming-message JS bridge - it only handles
+ *  token registration, which is all that's needed for background/killed
+ *  delivery (that path is native OS/Play Services behavior, no plugin code
+ *  involved). */
 export async function initFcm(userId: string): Promise<() => void> {
   if (!isTauriAndroid()) return () => {};
 
   try {
-    const { requestPermission, getToken, onNotificationReceived, onTokenRefresh } = await import(
-      'tauri-plugin-mobile-push-api'
+    const { requestPermissions, register, getToken, onTokenRefresh } = await import(
+      'tauri-plugin-fcm'
     );
 
-    const { granted } = await requestPermission();
-    if (!granted) {
-      await debugNotify('permission not granted');
+    const permission = await requestPermissions();
+    if (permission !== 'granted') {
+      await debugNotify(`permission not granted: ${permission}`);
       return () => {};
     }
 
-    const token = await getToken();
+    await register();
+    const { token } = await getToken();
     if (!token) {
       await debugNotify('getToken returned empty');
       return () => {};
     }
     await upsertToken(userId, token);
 
-    await ensureOrderBroadcastChannel();
-    const receivedListener = await onNotificationReceived((notification) => {
-      void sendNotification({
-        channelId: ORDER_BROADCAST_CHANNEL_ID,
-        title: notification.title ?? 'MealFlow',
-        body: notification.body ?? ''
-      });
-    });
     const tokenListener = await onTokenRefresh(({ token: newToken }) => {
       void upsertToken(userId, newToken);
     });
-
-    return () => {
-      void receivedListener.unregister();
-      void tokenListener.unregister();
-    };
+    return () => void tokenListener.unregister();
   } catch (e) {
     await debugNotify(`exception: ${e instanceof Error ? e.message : String(e)}`);
     return () => {};
