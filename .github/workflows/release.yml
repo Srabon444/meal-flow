@@ -168,6 +168,18 @@ jobs:
       - name: Bundle custom notification sound
         run: node .github/scripts/patch-android-sound.mjs
 
+      - name: DEBUG print gradle files
+        run: |
+          echo "::group::root build.gradle.kts"
+          cat src-tauri/gen/android/build.gradle.kts
+          echo "::endgroup::"
+          echo "::group::app build.gradle.kts"
+          cat src-tauri/gen/android/app/build.gradle.kts
+          echo "::endgroup::"
+          echo "::group::AndroidManifest.xml"
+          cat src-tauri/gen/android/app/src/main/AndroidManifest.xml
+          echo "::endgroup::"
+
       - name: Configure Firebase Cloud Messaging
         env:
           FCM_GOOGLE_SERVICES_JSON_BASE64: ${{ secrets.FCM_GOOGLE_SERVICES_JSON_BASE64 }}
