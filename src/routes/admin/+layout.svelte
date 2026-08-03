@@ -13,7 +13,8 @@
     { href: '/admin/rate', label: 'Rate' },
     { href: '/admin/cancel-requests', label: 'Requests' },
     { href: '/admin/employees', label: 'Employees' },
-    { href: '/admin/reports', label: 'Reports' }
+    { href: '/admin/reports', label: 'Reports' },
+    { href: '/admin/settings', label: 'Settings' }
   ];
 
   let stopAndroidReminders: () => void = () => {};
