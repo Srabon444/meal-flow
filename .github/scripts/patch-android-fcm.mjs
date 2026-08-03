@@ -6,26 +6,31 @@
 // an empty AndroidManifest.xml, so the app module must register the service
 // and apply the google-services Gradle plugin itself - neither is something
 // a Tauri plugin's Gradle module can inject into the app/root build files.
-// Anchors verified against the actual cargo-mobile2 android-studio templates
-// (tauri-apps/cargo-mobile2, templates/platforms/android-studio) and the
-// plugin's own android/build.gradle.kts + AndroidManifest.xml.
+//
+// Anchors are regex, not literal lines: the actual generated project (Tauri
+// CLI's own template, not the raw cargo-mobile2 upstream one) uses a
+// different AGP version and extra plugin ids than expected on the first
+// attempt at this script, and the AGP/theme values are exactly the kind of
+// thing that drifts between Tauri CLI releases - matching by structure
+// instead of exact version/attribute strings survives that drift.
 import { readFileSync, writeFileSync } from 'node:fs';
 
 const rootGradlePath = 'src-tauri/gen/android/build.gradle.kts';
 const appGradlePath = 'src-tauri/gen/android/app/build.gradle.kts';
 const manifestPath = 'src-tauri/gen/android/app/src/main/AndroidManifest.xml';
 
-function patch(path, marker, anchor, insert, label) {
+function patch(path, marker, anchorRegex, insert, label) {
   const original = readFileSync(path, 'utf8');
   if (original.includes(marker)) {
     console.log(`${path} already has ${label}, skipping.`);
     return;
   }
-  const patched = original.replace(anchor, insert);
-  if (patched === original) {
+  const match = original.match(anchorRegex);
+  if (!match) {
     console.error(`Could not find anchor for ${label} in ${path} - template must have changed.`);
     process.exit(1);
   }
+  const patched = original.replace(anchorRegex, insert(match));
   writeFileSync(path, patched);
   console.log(`Patched ${path} with ${label}.`);
 }
@@ -33,24 +38,24 @@ function patch(path, marker, anchor, insert, label) {
 patch(
   rootGradlePath,
   'com.google.gms:google-services',
-  '        classpath("com.android.tools.build:gradle:8.0.0")',
-  '        classpath("com.android.tools.build:gradle:8.0.0")\n        classpath("com.google.gms:google-services:4.4.2")',
+  /([ \t]*)classpath\("com\.android\.tools\.build:gradle:[^"]+"\)/,
+  (m) => `${m[0]}\n${m[1]}classpath("com.google.gms:google-services:4.4.2")`,
   'google-services classpath'
 );
 
 patch(
   appGradlePath,
   'com.google.gms.google-services',
-  '    id("rust")',
-  '    id("rust")\n    id("com.google.gms.google-services")',
+  /([ \t]*)id\("rust"\)/,
+  (m) => `${m[1]}id("com.google.gms.google-services")\n${m[0]}`,
   'google-services plugin'
 );
 
 patch(
   manifestPath,
   'app.tauri.mobilepush.FCMService',
-  'android:theme="@style/AppTheme">',
-  `android:theme="@style/AppTheme">
+  /<application[^>]*>/,
+  (m) => `${m[0]}
         <service
             android:name="app.tauri.mobilepush.FCMService"
             android:exported="false">
