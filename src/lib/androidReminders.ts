@@ -8,14 +8,14 @@ import {
 import { supabase } from './supabase';
 import { localToday } from './meals';
 
-const ORDER_BROADCAST_CHANNEL_ID = 'order-broadcast';
+export const ORDER_BROADCAST_CHANNEL_ID = 'order-broadcast';
 let orderChannelReady = false;
 
 // Sound resource is bundled from static/sounds/order-notification.wav into
 // gen/android/app/src/main/res/raw/order_notify.wav at build time - see
 // .github/scripts/patch-android-sound.mjs. Android resource names must be
 // lowercase with no extension when referenced from code.
-async function ensureOrderBroadcastChannel(): Promise<void> {
+export async function ensureOrderBroadcastChannel(): Promise<void> {
   if (orderChannelReady) return;
   await createChannel({
     id: ORDER_BROADCAST_CHANNEL_ID,

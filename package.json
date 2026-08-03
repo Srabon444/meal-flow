@@ -30,6 +30,7 @@
 	"dependencies": {
 		"@supabase/supabase-js": "^2.111.0",
 		"@tauri-apps/plugin-notification": "^2",
-		"chart.js": "^4.5.1"
+		"chart.js": "^4.5.1",
+		"tauri-plugin-mobile-push-api": "^0.1"
 	}
 }
