@@ -1,5 +1,6 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { configureVapid, sendToUsers } from '../_shared/webpush.ts';
+import { sendFcmToUsers } from '../_shared/fcm.ts';
 
 // Cron-only endpoint: Supabase's scheduled Cron Jobs hit this twice a day
 // (see README "Push reminders" setup). Never exposed to end users, so auth
@@ -71,8 +72,11 @@ Deno.serve(async (req) => {
       : { title: 'MealFlow', body: 'Ordering is still open — close it if needed.' };
 
   try {
-    const result = await sendToUsers(client, targetUserIds, payload);
-    return new Response(JSON.stringify(result), { status: 200 });
+    const [webResult, fcmResult] = await Promise.all([
+      sendToUsers(client, targetUserIds, payload),
+      sendFcmToUsers(client, targetUserIds, payload)
+    ]);
+    return new Response(JSON.stringify({ web: webResult, fcm: fcmResult }), { status: 200 });
   } catch (err) {
     return new Response(JSON.stringify({ error: (err as Error).message }), { status: 500 });
   }
