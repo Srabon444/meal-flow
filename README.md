@@ -79,11 +79,15 @@ general rule for every env var this branch introduces: they need to exist
 pre-merge, not as a manual post-merge checklist item — unlike the rest of the
 Release section below, a fresh build depends on this one at compile time.
 
-Employees get a push at 9am (Asia/Dhaka) if they haven't ordered yet; admins get
-one at 10:30am if ordering is still open. Real push for the web app and for
-Android (via Firebase Cloud Messaging, see below — delivered even if the app
-is fully closed). Desktop's webview generally lacks push service support, so
-desktop builds currently show no background reminder.
+Employees and admins both get a push at 9am (Asia/Dhaka) if they haven't ordered
+yet (admins can now order their own meal too, from the admin dashboard); admins
+additionally get one at 10:30am if ordering is still open. Real push for the web
+app and for Android (via Firebase Cloud Messaging, see below — delivered even if
+the app is fully closed). Desktop's webview lacks push service support for
+background delivery — while the desktop app is open (foreground or running in
+the background), it falls back to the same local-notification check Android used
+before FCM was added. There is still no notification if the desktop app is fully
+closed.
 
 1. **Generate a VAPID keypair** (needed once):
    ```bash
