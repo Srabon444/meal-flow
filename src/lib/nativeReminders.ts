@@ -30,6 +30,10 @@ function isTauriAndroid(): boolean {
   return '__TAURI_INTERNALS__' in window && /Android/i.test(navigator.userAgent);
 }
 
+function isTauriNative(): boolean {
+  return '__TAURI_INTERNALS__' in window;
+}
+
 function alreadyNotifiedToday(key: string): boolean {
   return localStorage.getItem(key) === localToday();
 }
@@ -118,19 +122,21 @@ function initOrderBroadcastListener(): () => void {
   return () => void supabase.removeChannel(channel);
 }
 
-/** Starts the Android-only foreground reminder loop (and, for employees, the
- *  on-demand order-broadcast listener). No-ops outside the Tauri Android
- *  build — web/desktop get real push instead (see push.ts). Returns a
- *  cleanup function for onDestroy. */
-export function initAndroidReminders(userId: string, role: 'employee' | 'admin'): () => void {
-  if (!isTauriAndroid()) return () => {};
+/** Starts the foreground reminder loop: everyone gets the 9am "haven't ordered"
+ *  check, admins additionally get the 10:30am "ordering still open" check. Runs on
+ *  any Tauri build (desktop or Android) — web already gets real push instead (see
+ *  push.ts). The on-demand order-broadcast listener and FCM stay Android-only:
+ *  desktop has no FCM registration and wasn't asked to get the on-demand broadcast,
+ *  only this scheduled check. Returns a cleanup function for onDestroy. */
+export function initNativeReminders(userId: string, role: 'employee' | 'admin'): () => void {
+  if (!isTauriNative()) return () => {};
   const check = () => {
-    if (role === 'employee') void checkEmployeeReminder(userId);
-    else void checkAdminReminder(userId);
+    void checkEmployeeReminder(userId);
+    if (role === 'admin') void checkAdminReminder(userId);
   };
   check();
   const interval = setInterval(check, 15 * 60 * 1000);
-  const stopBroadcastListener = role === 'employee' ? initOrderBroadcastListener() : () => {};
+  const stopBroadcastListener = role === 'employee' && isTauriAndroid() ? initOrderBroadcastListener() : () => {};
   return () => {
     clearInterval(interval);
     stopBroadcastListener();

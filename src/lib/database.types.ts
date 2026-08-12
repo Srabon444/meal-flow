@@ -185,6 +185,32 @@ export type Database = {
           },
         ]
       }
+      order_broadcasts: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_broadcasts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ordering_pause: {
         Row: {
           paused_at: string

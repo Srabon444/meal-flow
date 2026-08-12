@@ -32,7 +32,10 @@ Deno.serve(async (req) => {
   if (kind === 'employee-reminder') {
     const [{ data: employees, error: employeesError }, { data: confirmedToday, error: entriesError }] =
       await Promise.all([
-        client.from('profiles').select('id').eq('role', 'employee').eq('active', true),
+        // Admins can now self-order too (see admin dashboard's "Your meal" card),
+        // so they get this same "haven't ordered" nudge, on top of their separate
+        // 10:30am "ordering still open" reminder below.
+        client.from('profiles').select('id').in('role', ['employee', 'admin']).eq('active', true),
         client.from('meal_entries').select('user_id').eq('entry_date', today).eq('status', 'CONFIRMED')
       ]);
     if (employeesError || entriesError) {
