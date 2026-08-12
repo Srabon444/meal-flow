@@ -3,7 +3,7 @@
   import { page } from '$app/state';
   import { onMount, onDestroy } from 'svelte';
   import { initWebPush } from '$lib/push';
-  import { initAndroidReminders } from '$lib/androidReminders';
+  import { initNativeReminders } from '$lib/nativeReminders';
   import { initFcm } from '$lib/fcm';
 
   let { children } = $props();
@@ -14,21 +14,21 @@
     { href: '/employee/settings', label: 'Settings' }
   ];
 
-  let stopAndroidReminders: () => void = () => {};
+  let stopNativeReminders: () => void = () => {};
   let stopFcm: () => void = () => {};
 
   onMount(() => {
     const userId = page.data.profile?.id;
     if (userId) {
       initWebPush(userId).catch((e) => console.error('push init failed', e));
-      stopAndroidReminders = initAndroidReminders(userId, 'employee');
+      stopNativeReminders = initNativeReminders(userId, 'employee');
       initFcm(userId)
         .then((stop) => (stopFcm = stop))
         .catch((e) => console.error('fcm init failed', e));
     }
   });
   onDestroy(() => {
-    stopAndroidReminders();
+    stopNativeReminders();
     stopFcm();
   });
 </script>
