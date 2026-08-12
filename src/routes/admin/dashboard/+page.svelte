@@ -3,6 +3,7 @@
   import { onMount } from 'svelte';
   import { localToday } from '$lib/meals';
   import { page } from '$app/state';
+  import MealOrderCard from '$lib/components/MealOrderCard.svelte';
 
   type Row = { id: string; user_id: string; profiles: { name: string } | null };
 
@@ -84,6 +85,11 @@
 <div class="mb-8">
   <p class="font-display text-xs tracking-[0.3em] text-stamp uppercase mb-2">Tally</p>
   <h1 class="font-display text-2xl font-bold tracking-tight">Who's eating</h1>
+</div>
+
+<div class="mb-8">
+  <p class="font-display text-xs tracking-[0.3em] text-stamp uppercase mb-2">Your meal</p>
+  <MealOrderCard userId={adminId} />
 </div>
 
 <div class="ticket mb-8 px-6 py-5">
