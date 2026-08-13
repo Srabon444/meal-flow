@@ -24,7 +24,7 @@
 
   let loading = $state(true);
   let loadError = $state('');
-  let dueRows = $state<{ name: string; due: number }[]>([]);
+  let dueRows = $state<{ name: string; isAdmin: boolean; due: number }[]>([]);
 
   function destroyCharts() {
     mealsChart?.destroy();
@@ -64,7 +64,7 @@
     const [entriesRes, balancesRes, employeesRes] = await Promise.all([
       supabase.rpc('meals_per_day', { since }),
       supabase.rpc('employee_balances'),
-      supabase.functions.invoke<{ employees: { id: string; name: string }[] }>(
+      supabase.functions.invoke<{ employees: { id: string; name: string; role: 'employee' | 'admin' }[] }>(
         'admin-list-employees',
         { method: 'GET' }
       )
@@ -95,14 +95,21 @@
       if (row.entry_date in countByDay) countByDay[row.entry_date] = Number(row.meal_count);
     }
 
+    // Admin's own self-ordered meals count toward the "Meals per day" chart
+    // automatically (meals_per_day() has no role filter) - only the per-person
+    // dues chart needed the name/role lookup below to also show admin.
     const nameById = Object.fromEntries(
       (employeesRes.data?.employees ?? []).map((e) => [e.id, e.name])
+    );
+    const roleById = Object.fromEntries(
+      (employeesRes.data?.employees ?? []).map((e) => [e.id, e.role])
     );
 
     const balanceRows = (balancesRes.data ?? []) as unknown as BalanceRow[];
     dueRows = balanceRows
       .map((r) => ({
         name: nameById[r.user_id] ?? 'Unknown',
+        isAdmin: roleById[r.user_id] === 'admin',
         due: Number(r.total_cost) - Number(r.total_paid)
       }))
       .filter((r) => r.due > 0)
@@ -130,10 +137,24 @@
       duesChart = new Chart(duesCanvas, {
         type: 'bar',
         data: {
-          labels: dueRows.map((r) => r.name),
+          labels: dueRows.map((r) => (r.isAdmin ? `${r.name} (Admin)` : r.name)),
           datasets: [{ label: 'Due', data: dueRows.map((r) => r.due), backgroundColor: '#c4432b' }]
         },
-        options: { responsive: true, plugins: { legend: { display: false } } }
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          // Highlights the "(Admin)" label the same stamp color used for the
+          // badge on the employees page, so admin's bar is easy to spot now
+          // that admins are mixed into what was an employees-only chart.
+          scales: {
+            x: {
+              ticks: {
+                color: (ctx) => (dueRows[ctx.index]?.isAdmin ? '#c4432b' : '#2b2622'),
+                font: (ctx) => ({ weight: dueRows[ctx.index]?.isAdmin ? 'bold' : 'normal' })
+              }
+            }
+          }
+        }
       });
     }
   }

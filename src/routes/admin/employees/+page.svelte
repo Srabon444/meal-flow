@@ -4,7 +4,14 @@
   import { onMount } from 'svelte';
   import type { Balance } from '$lib/meals';
 
-  type Employee = { id: string; name: string; email: string | null; active: boolean; createdAt: string };
+  type Employee = {
+    id: string;
+    name: string;
+    role: 'employee' | 'admin';
+    email: string | null;
+    active: boolean;
+    createdAt: string;
+  };
   type HistoryRow = { date: string; kind: 'meal' | 'payment'; detail: string; amount: number };
 
   let name = $state('');
@@ -349,6 +356,11 @@
                 <div>
                   <p class="text-sm font-medium">
                     {emp.name}
+                    {#if emp.role === 'admin'}
+                      <span class="font-display text-[10px] tracking-widest text-stamp uppercase ml-1"
+                        >(Admin)</span
+                      >
+                    {/if}
                     {#if !emp.active}
                       <span class="font-display text-[10px] tracking-widest text-ink/40 uppercase ml-1"
                         >· inactive</span
@@ -379,28 +391,30 @@
                       Record payment
                     </button>
                   {/if}
-                  {#if removingId === emp.id}
-                    <span class="font-display text-[11px] tracking-widest text-stamp uppercase">Deactivate?</span>
-                    <button
-                      onclick={() => confirmDeactivate(emp.id)}
-                      disabled={togglingId === emp.id}
-                      class="font-display text-[11px] tracking-widest uppercase text-stamp hover:text-stamp-dark disabled:opacity-50"
-                    >
-                      {togglingId === emp.id ? 'Saving…' : 'Confirm'}
-                    </button>
-                    <button
-                      onclick={() => (removingId = null)}
-                      class="font-display text-[11px] tracking-widest uppercase text-ink/40 hover:text-ink"
-                    >
-                      Cancel
-                    </button>
-                  {:else}
-                    <button
-                      onclick={() => (removingId = emp.id)}
-                      class="font-display text-[11px] tracking-widest uppercase text-ink/40 hover:text-stamp transition-colors"
-                    >
-                      Deactivate
-                    </button>
+                  {#if emp.role === 'employee'}
+                    {#if removingId === emp.id}
+                      <span class="font-display text-[11px] tracking-widest text-stamp uppercase">Deactivate?</span>
+                      <button
+                        onclick={() => confirmDeactivate(emp.id)}
+                        disabled={togglingId === emp.id}
+                        class="font-display text-[11px] tracking-widest uppercase text-stamp hover:text-stamp-dark disabled:opacity-50"
+                      >
+                        {togglingId === emp.id ? 'Saving…' : 'Confirm'}
+                      </button>
+                      <button
+                        onclick={() => (removingId = null)}
+                        class="font-display text-[11px] tracking-widest uppercase text-ink/40 hover:text-ink"
+                      >
+                        Cancel
+                      </button>
+                    {:else}
+                      <button
+                        onclick={() => (removingId = emp.id)}
+                        class="font-display text-[11px] tracking-widest uppercase text-ink/40 hover:text-stamp transition-colors"
+                      >
+                        Deactivate
+                      </button>
+                    {/if}
                   {/if}
                 {/if}
               </div>
