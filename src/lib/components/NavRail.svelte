@@ -2,16 +2,24 @@
   import { page } from '$app/state';
   import { goto } from '$app/navigation';
   import { supabase } from '$lib/supabase';
+  import Confirm from './Confirm.svelte';
 
   let { links }: { links: { href: string; label: string }[] } = $props();
 
   let mobileOpen = $state(false);
+  let confirmingSignOut = $state(false);
 
   function isActive(href: string) {
     return page.url.pathname === href;
   }
 
+  function requestSignOut() {
+    mobileOpen = false;
+    confirmingSignOut = true;
+  }
+
   async function signOut() {
+    confirmingSignOut = false;
     try {
       if ('serviceWorker' in navigator) {
         const registration = await navigator.serviceWorker.getRegistration();
@@ -46,7 +54,7 @@
         </a>
       {/each}
       <button
-        onclick={signOut}
+        onclick={requestSignOut}
         class="font-display text-xs tracking-widest uppercase text-ink/50 hover:text-stamp transition-colors ml-2"
       >
         Sign out
@@ -81,10 +89,7 @@
         </a>
       {/each}
       <button
-        onclick={() => {
-          mobileOpen = false;
-          signOut();
-        }}
+        onclick={requestSignOut}
         class="block w-full text-left font-display text-xs tracking-widest uppercase py-3 text-ink/60"
       >
         Sign out
@@ -92,3 +97,11 @@
     </nav>
   {/if}
 </header>
+
+<Confirm
+  open={confirmingSignOut}
+  message="Sign out of MealFlow?"
+  confirmLabel="Sign out"
+  onConfirm={signOut}
+  onCancel={() => (confirmingSignOut = false)}
+/>

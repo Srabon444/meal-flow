@@ -3,6 +3,7 @@
   import { pickActiveRate, computeBalance, localToday } from '$lib/meals';
   import { onMount, onDestroy, tick } from 'svelte';
   import { Chart, DoughnutController, ArcElement, Tooltip, Legend } from 'chart.js';
+  import Confirm from './Confirm.svelte';
 
   Chart.register(DoughnutController, ArcElement, Tooltip, Legend);
 
@@ -15,6 +16,7 @@
   let todayEntry = $state<TodayEntry | null>(null);
   let balance = $state({ totalEaten: 0, totalCost: 0, totalPaid: 0, due: 0 });
   let marking = $state(false);
+  let confirmingOrder = $state(false);
   let error = $state('');
   let loadError = $state('');
   let paused = $state(false);
@@ -69,6 +71,7 @@
   async function markEating() {
     if (marking) return;
     if (activeRate === null) return;
+    confirmingOrder = false;
     marking = true;
     error = '';
     // rate_applied is recomputed server-side by a trigger; this value is only a hint.
@@ -107,7 +110,7 @@
         <p class="font-display text-[11px] tracking-widest text-ink/60 uppercase mb-3">Eating today?</p>
         {#if error}<p class="text-sm text-stamp-dark mb-3">{error}</p>{/if}
         <button
-          onclick={markEating}
+          onclick={() => (confirmingOrder = true)}
           disabled={marking}
           class="flex flex-col items-center gap-2 mx-auto disabled:opacity-50 hover:brightness-105 transition-[filter]"
         >
@@ -116,6 +119,13 @@
             {marking ? 'Marking…' : `Charged at ${activeRate.toFixed(2)}`}
           </span>
         </button>
+        <Confirm
+          open={confirmingOrder}
+          message={`Mark yourself eating today? Charged at ${activeRate.toFixed(2)}.`}
+          confirmLabel="Place order"
+          onConfirm={markEating}
+          onCancel={() => (confirmingOrder = false)}
+        />
       {/if}
     </div>
 
