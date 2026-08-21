@@ -68,6 +68,10 @@
   onMount(load);
   onDestroy(() => donutChart?.destroy());
 
+  export function refresh() {
+    load();
+  }
+
   async function markEating() {
     if (marking) return;
     if (activeRate === null) return;

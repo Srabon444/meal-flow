@@ -9,6 +9,7 @@
 
   const adminId = page.data.profile?.id as string;
 
+  let mealCard: MealOrderCard | undefined;
   let selectedDate = $state(localToday());
   let rows = $state<Row[]>([]);
   let loading = $state(true);
@@ -60,6 +61,10 @@
       return;
     }
     paused = !paused;
+    // The MealOrderCard below loaded its own paused flag on mount - toggling
+    // here doesn't touch it, so without this its "Order now" button stays
+    // hidden/shown until a manual reload.
+    mealCard?.refresh();
   }
 
   async function notifyToOrder() {
@@ -89,7 +94,7 @@
 
 <div class="mb-8">
   <p class="font-display text-xs tracking-[0.3em] text-stamp uppercase mb-2">Your meal</p>
-  <MealOrderCard userId={adminId} />
+  <MealOrderCard bind:this={mealCard} userId={adminId} />
 </div>
 
 <div class="ticket mb-8 px-6 py-5">
